@@ -1,5 +1,4 @@
-# kunigami-cleaning
-[kunigami_cleaning.html](https://github.com/user-attachments/files/27039623/kunigami_cleaning.html)
+[kunigami_cleaning.html](https://github.com/user-attachments/files/27039901/kunigami_cleaning.html)
 <!DOCTYPE html>
 <html lang="ja">
 <head>
