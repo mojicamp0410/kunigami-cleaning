@@ -423,6 +423,51 @@ body {
 .empty { text-align: center; padding: 3rem 1rem; color: var(--sage); }
 .empty .e-icon { font-size: 3rem; opacity: .4; margin-bottom: .8rem; }
 
+/* ── MEMO ── */
+.memo-wrap {
+  padding: .4rem .8rem .8rem;
+  border-top: 1px solid var(--mist);
+}
+.memo-label {
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--sage);
+  letter-spacing: .08em;
+  margin-bottom: .35rem;
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+.memo-textarea {
+  width: 100%;
+  min-height: 64px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  font-size: .82rem;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  color: var(--ink);
+  background: var(--pale);
+  resize: vertical;
+  transition: border-color .15s, box-shadow .15s;
+  line-height: 1.55;
+}
+.memo-textarea:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(45,106,69,.1);
+  background: var(--white);
+}
+.memo-textarea::placeholder { color: var(--sage); opacity: .6; }
+.memo-saved {
+  font-size: .65rem;
+  color: var(--sage);
+  text-align: right;
+  margin-top: .25rem;
+  min-height: .9rem;
+  transition: opacity .3s;
+}
+
 @media (max-width: 480px) {
   .grid { grid-template-columns: 1fr; gap: .75rem; padding: .6rem .75rem 2rem; }
   .topbar { padding: .7rem .9rem; }
@@ -604,7 +649,8 @@ function loadState() {
     FACILITIES.forEach(f => {
       out[f.id] = s[f.id] || {
         checked: {},
-        completedAt: null
+        completedAt: null,
+        memo: ""
       };
     });
     return out;
@@ -699,6 +745,7 @@ function renderGrid() {
 
     const ts = s.completedAt ? new Date(s.completedAt).toLocaleString('ja-JP',{
       month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+    const memo = s.memo || '';
 
     return `
       <div class="card status-${status}" id="card-${f.id}">
@@ -723,6 +770,16 @@ function renderGrid() {
           </div>
         </div>
         <div class="steps">${stepsHtml}</div>
+        <div class="memo-wrap">
+          <div class="memo-label">📝 引き継ぎメモ</div>
+          <textarea
+            class="memo-textarea"
+            id="memo-${f.id}"
+            placeholder="忘れ物・破損・特記事項など次の担当者への申し送りを記入"
+            oninput="saveMemo('${f.id}')"
+          >${memo}</textarea>
+          <div class="memo-saved" id="memo-saved-${f.id}"></div>
+        </div>
         <div class="card-footer">
           <button class="btn-action btn-complete"
             onclick="completeAll('${f.id}')"
@@ -766,19 +823,42 @@ function completeAll(fid) {
 
 function resetCard(fid) {
   const f = FACILITIES.find(x => x.id === fid);
-  if (!confirm(`${f.nameJp} の清掃状況をリセットしますか？`)) return;
-  state[fid] = { checked: {}, completedAt: null };
+  if (!confirm(`${f.nameJp} の清掃状況をリセットしますか？\n※メモは残ります`)) return;
+  const memo = state[fid]?.memo || '';
+  state[fid] = { checked: {}, completedAt: null, memo };
   saveState();
   render();
   showToast(`↺ ${f.nameJp} をリセットしました`);
 }
 
 function resetAll() {
-  if (!confirm('全施設の清掃状況をリセットしますか？\n（朝のリセットに使ってください）')) return;
-  FACILITIES.forEach(f => { state[f.id] = { checked: {}, completedAt: null }; });
+  if (!confirm('全施設の清掃状況をリセットしますか？\n（朝のリセット用・メモは残ります）')) return;
+  FACILITIES.forEach(f => {
+    const memo = state[f.id]?.memo || '';
+    state[f.id] = { checked: {}, completedAt: null, memo };
+  });
   saveState();
   render();
   showToast('↺ 全施設をリセットしました');
+}
+
+// メモを保存（入力から300ms後に自動保存）
+const memoTimers = {};
+function saveMemo(fid) {
+  clearTimeout(memoTimers[fid]);
+  memoTimers[fid] = setTimeout(() => {
+    const el = document.getElementById(`memo-${fid}`);
+    if (!el) return;
+    if (!state[fid]) state[fid] = { checked: {}, completedAt: null, memo: '' };
+    state[fid].memo = el.value;
+    saveState();
+    const saved = document.getElementById(`memo-saved-${fid}`);
+    if (saved) {
+      saved.textContent = '✓ 保存しました';
+      saved.style.opacity = '1';
+      setTimeout(() => { saved.style.opacity = '0'; }, 1500);
+    }
+  }, 300);
 }
 
 function filterCat(cat, btn) {
