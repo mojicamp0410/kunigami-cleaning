@@ -1,4 +1,4 @@
-[kunigami_cleaning.html](https://github.com/user-attachments/files/27039901/kunigami_cleaning.html)
+[kunigami_cleaning (3).html](https://github.com/user-attachments/files/27095711/kunigami_cleaning.3.html)
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -64,8 +64,16 @@ body {
   padding: .3rem .7rem;
   border-radius: 4px;
 }
-.btn-reset-all {
-  background: rgba(255,255,255,.12);
+.sync-status {
+  font-size: .72rem;
+  padding: .25rem .7rem;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sync-loading { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
+.sync-ok      { background: rgba(76,175,80,.25);   color: #a5d6a7; }
+.sync-warn    { background: rgba(255,152,0,.2);    color: #ffcc80; }
   border: 1px solid rgba(255,255,255,.25);
   color: white;
   padding: .3rem .8rem;
@@ -487,6 +495,7 @@ body {
     </div>
   </div>
   <div class="topbar-right">
+    <div class="sync-status sync-loading" id="syncStatus">🔄 読み込み中...</div>
     <div class="clock" id="clock">--:--</div>
     <button class="btn-reset-all" onclick="resetAll()">全リセット</button>
   </div>
@@ -639,26 +648,79 @@ const FACILITIES = [
 ];
 
 // ── STATE ─────────────────────────────────────────────────────
-const KEY = "kfp_cleaning_v2";
-let state = loadState();
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxbq418PrCgUoz-uReeIK8SGYrnRdHlzxKcgjgAAHDJvQbFnL-q4OvbGIQqrZs9mmmH/exec";
+const LOCAL_KEY = "kfp_cleaning_v3_local";
+let state = {};
+let isSyncing = false;
 
-function loadState() {
-  try {
-    const s = JSON.parse(localStorage.getItem(KEY) || "{}");
-    const out = {};
-    FACILITIES.forEach(f => {
-      out[f.id] = s[f.id] || {
-        checked: {},
-        completedAt: null,
-        memo: ""
-      };
-    });
-    return out;
-  } catch(e) { return {}; }
+function initState() {
+  FACILITIES.forEach(f => {
+    if (!state[f.id]) state[f.id] = { checked: {}, completedAt: null, memo: "" };
+  });
 }
 
-function saveState() {
-  localStorage.setItem(KEY, JSON.stringify(state));
+// ローカルに即時保存
+function saveLocal() {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+}
+
+// GASからロード
+async function loadFromGAS() {
+  showSyncStatus("🔄 データを読み込み中...", "loading");
+  try {
+    const res = await fetch(`${GAS_URL}?action=load`);
+    const json = await res.json();
+    if (json.status === "ok" && json.data && json.data !== "{}") {
+      const remote = JSON.parse(json.data);
+      // remoteをベースにしてstateを更新
+      FACILITIES.forEach(f => {
+        state[f.id] = remote[f.id] || { checked: {}, completedAt: null, memo: "" };
+      });
+      saveLocal();
+    } else {
+      // GASにデータなし→ローカルから復元
+      loadFromLocal();
+    }
+    showSyncStatus("✅ 同期済み", "ok");
+  } catch(e) {
+    // オフライン→ローカルから復元
+    loadFromLocal();
+    showSyncStatus("⚠️ オフライン（ローカルデータを使用）", "warn");
+  }
+  render();
+}
+
+// GASへ保存
+async function saveToGAS() {
+  if (isSyncing) return;
+  isSyncing = true;
+  showSyncStatus("🔄 保存中...", "loading");
+  try {
+    const data = JSON.stringify(state);
+    await fetch(`${GAS_URL}?action=save&data=${encodeURIComponent(data)}`);
+    saveLocal();
+    showSyncStatus("✅ 全デバイスに同期済み", "ok");
+  } catch(e) {
+    saveLocal();
+    showSyncStatus("⚠️ オフライン（ローカルに保存）", "warn");
+  }
+  isSyncing = false;
+}
+
+function loadFromLocal() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
+    FACILITIES.forEach(f => {
+      state[f.id] = s[f.id] || { checked: {}, completedAt: null, memo: "" };
+    });
+  } catch(e) { initState(); }
+}
+
+function showSyncStatus(msg, type) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'sync-status sync-' + type;
 }
 
 function getFacilityStatus(fid) {
@@ -796,7 +858,7 @@ function renderGrid() {
 
 // ── INTERACTIONS ──────────────────────────────────────────────
 function toggleStep(fid, sid) {
-  if (!state[fid]) state[fid] = { checked: {}, completedAt: null };
+  if (!state[fid]) state[fid] = { checked: {}, completedAt: null, memo: "" };
   state[fid].checked[sid] = !state[fid].checked[sid];
 
   const f = FACILITIES.find(x => x.id === fid);
@@ -807,17 +869,17 @@ function toggleStep(fid, sid) {
   } else {
     state[fid].completedAt = null;
   }
-  saveState();
   render();
+  saveToGAS();
 }
 
 function completeAll(fid) {
   const f = FACILITIES.find(x => x.id === fid);
-  if (!state[fid]) state[fid] = { checked: {}, completedAt: null };
+  if (!state[fid]) state[fid] = { checked: {}, completedAt: null, memo: "" };
   f.steps.forEach(s => state[fid].checked[s.id] = true);
   state[fid].completedAt = new Date().toISOString();
-  saveState();
   render();
+  saveToGAS();
   showToast(`✅ ${f.nameJp} 使用可能になりました！`);
 }
 
@@ -826,8 +888,8 @@ function resetCard(fid) {
   if (!confirm(`${f.nameJp} の清掃状況をリセットしますか？\n※メモは残ります`)) return;
   const memo = state[fid]?.memo || '';
   state[fid] = { checked: {}, completedAt: null, memo };
-  saveState();
   render();
+  saveToGAS();
   showToast(`↺ ${f.nameJp} をリセットしました`);
 }
 
@@ -837,12 +899,12 @@ function resetAll() {
     const memo = state[f.id]?.memo || '';
     state[f.id] = { checked: {}, completedAt: null, memo };
   });
-  saveState();
   render();
+  saveToGAS();
   showToast('↺ 全施設をリセットしました');
 }
 
-// メモを保存（入力から300ms後に自動保存）
+// メモを保存（入力から800ms後に自動保存）
 const memoTimers = {};
 function saveMemo(fid) {
   clearTimeout(memoTimers[fid]);
@@ -851,14 +913,14 @@ function saveMemo(fid) {
     if (!el) return;
     if (!state[fid]) state[fid] = { checked: {}, completedAt: null, memo: '' };
     state[fid].memo = el.value;
-    saveState();
+    saveToGAS();
     const saved = document.getElementById(`memo-saved-${fid}`);
     if (saved) {
-      saved.textContent = '✓ 保存しました';
+      saved.textContent = '✓ 全デバイスに保存しました';
       saved.style.opacity = '1';
-      setTimeout(() => { saved.style.opacity = '0'; }, 1500);
+      setTimeout(() => { saved.style.opacity = '0'; }, 2000);
     }
-  }, 300);
+  }, 800);
 }
 
 function filterCat(cat, btn) {
@@ -885,7 +947,13 @@ function showToast(msg) {
 }
 
 // ── INIT ──────────────────────────────────────────────────────
+initState();
+loadFromLocal(); // まずローカルで即表示
 render();
+loadFromGAS();   // その後クラウドから最新を取得
+
+// 30秒ごとに自動同期（別デバイスの更新を反映）
+setInterval(() => { loadFromGAS(); }, 30000);
 </script>
 </body>
 </html>
