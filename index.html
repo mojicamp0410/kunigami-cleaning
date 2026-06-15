@@ -907,13 +907,15 @@ async function loadFromGAS() {
     const json = await res.json();
     if (json.status === "ok" && json.data && json.data !== "{}") {
       const remote = JSON.parse(json.data);
-      // フォーカス中のtextareaはメモを上書きしない
+      // 入力中・未保存のメモはGASデータで上書きしない
       const activeEl = document.activeElement;
-      const activeMemoId    = (activeEl?.classList.contains('memo-textarea'))    ? activeEl.id.replace('memo-', '')    : null;
-      const activeCheckinId = (activeEl?.classList.contains('checkin-input'))    ? activeEl.id.replace('checkin-', '') : null;
+      const activeCheckinId = (activeEl?.classList.contains('checkin-input')) ? activeEl.id.replace('checkin-', '') : null;
       FACILITIES.forEach(f => {
         const r = remote[f.id] || defaultFacilityState();
-        if (f.id === activeMemoId)    r.memo        = state[f.id]?.memo        ?? r.memo;
+        // pendingMemoFids に入っている（未保存）か、今まさに入力中のメモは保持
+        if (pendingMemoFids.has(f.id) || activeEl?.id === `memo-${f.id}`) {
+          r.memo = state[f.id]?.memo ?? r.memo;
+        }
         if (f.id === activeCheckinId) r.nextCheckin = state[f.id]?.nextCheckin ?? r.nextCheckin;
         state[f.id] = r;
       });
@@ -1231,19 +1233,28 @@ function saveCheckin(fid, val) {
 
 // メモ自動保存（800ms後）
 const memoTimers = {};
+const pendingMemoFids = new Set(); // 未GAS保存のメモを追跡
+
 function saveMemo(fid) {
+  const el = document.getElementById(`memo-${fid}`);
+  if (!el) return;
+  if (!state[fid]) state[fid] = defaultFacilityState();
+
+  // ① キー入力のたびにstateを即時更新（DOMが消える前に確保）
+  state[fid].memo = el.value;
+  pendingMemoFids.add(fid); // 未保存フラグON
+  saveLocal();               // ローカルにも即保存
+
+  // ② GASへの書き込みだけ800msデバウンス
   clearTimeout(memoTimers[fid]);
-  memoTimers[fid] = setTimeout(() => {
-    const el = document.getElementById(`memo-${fid}`);
-    if (!el) return;
-    if (!state[fid]) state[fid] = defaultFacilityState();
-    state[fid].memo = el.value;
-    saveToGAS();
-    const saved = document.getElementById(`memo-saved-${fid}`);
-    if (saved) {
-      saved.textContent = '✓ 全デバイスに保存しました';
-      saved.style.opacity = '1';
-      setTimeout(() => { saved.style.opacity = '0'; }, 2000);
+  memoTimers[fid] = setTimeout(async () => {
+    await saveToGAS();
+    pendingMemoFids.delete(fid); // 保存完了後にフラグOFF
+    const savedEl = document.getElementById(`memo-saved-${fid}`);
+    if (savedEl) {
+      savedEl.textContent = '✓ 全デバイスに保存しました';
+      savedEl.style.opacity = '1';
+      setTimeout(() => { savedEl.style.opacity = '0'; }, 2000);
     }
   }, 800);
 }
@@ -1284,3 +1295,4 @@ setInterval(() => { loadFromGAS(); }, 30000);
 </script>
 </body>
 </html>
+
