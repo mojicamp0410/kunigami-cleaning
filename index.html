@@ -439,6 +439,29 @@ body {
   border-radius: 3px;
 }
 
+/* セクションヘッダー（チェックなし・区切り線）*/
+.step-section {
+  padding: .7rem .5rem .3rem;
+  font-size: .72rem;
+  font-weight: 900;
+  color: var(--forest);
+  letter-spacing: .06em;
+  border-bottom: 1.5px solid var(--mist);
+  margin-top: .4rem;
+  cursor: default;
+}
+.step-section:first-child { margin-top: 0; }
+
+/* ステップ詳細メモ */
+.step-note {
+  font-size: .68rem;
+  color: var(--sage);
+  line-height: 1.45;
+  margin-top: .2rem;
+  padding-left: calc(22px + .6rem + 1.5rem + .6rem);
+}
+.step.checked .step-note { opacity: .55; }
+
 /* ── ACTION BUTTONS ── */
 .card-footer {
   padding: .6rem 1rem .9rem;
@@ -643,6 +666,7 @@ body {
   .step-icon  { font-size: .95rem; }
   .step-label { font-size: .88rem; }
   .step-checker { font-size: .65rem; padding-left: calc(26px + .6rem + 1.5rem + .6rem); }
+  .step-note    { font-size: .7rem;  padding-left: calc(26px + .6rem + 1.5rem + .6rem); }
 
   /* ── フッターボタン ── */
   .card-footer { padding: .55rem .9rem .8rem; }
@@ -749,13 +773,158 @@ function updateStaffUI() {
 
 // ── FACILITY DEFINITIONS ───────────────────────────────────────
 const BUNGALOW_STEPS = [
+  // ① 入室チェック
+  { id:"bh1", section:true, label:"🔑 入室チェック" },
+  { id:"b1", icon:"🔍", label:"忘れ物・破損・ゴミチェック" },
+  { id:"b2", icon:"🛏️", label:"寝具の撤収（ひっぺがし）" },
+
+  // ② リビング 2Fロフト（上から下へ）
+  { id:"bh2", section:true, label:"🏠 リビング 2Fロフト" },
+  { id:"b3", icon:"🪶", label:"天井・壁・木部分の清掃",
+    note:"天井・壁の埃・蜘蛛の巣確認 → 木と木の部分埃落とし（高所はクイックル） → 木柵の拭き掃除" },
+  { id:"b4", icon:"🧹", label:"ロフト床の清掃" },
+  { id:"b5", icon:"🪜", label:"ハシゴ拭きあげ・窓上の埃",
+    note:"降りながらハシゴを拭きあげ → ハシゴ前の窓ガラス上の埃確認" },
+
+  // ③ リビング 1F（上から下へ）
+  { id:"bh3", section:true, label:"🛋️ リビング 1F" },
+  { id:"b6", icon:"🪶", label:"天井・壁・カーテンレール・ランプ",
+    note:"上から下へ埃落とし → カーテンレール上の埃確認 → ランプ類拭きあげ（クイックル）" },
+  { id:"b7", icon:"🪑", label:"テーブル・椅子の拭きあげ" },
+  { id:"b8", icon:"🗄️", label:"布団クローゼット上クイックル" },
+  { id:"b9", icon:"🛏️", label:"ベッドメイク" },
+  { id:"b10", icon:"🧹", label:"1F床の清掃" },
+
+  // ④ ベランダ・玄関・外回り
+  { id:"bh4", section:true, label:"🌿 ベランダ・玄関・外回り" },
+  { id:"b11", icon:"🪟", label:"窓・ベランダ",
+    note:"窓拭き → ベランダの蜘蛛の巣・枯葉掃除" },
+  { id:"b12", icon:"🚪", label:"玄関・ドア周り",
+    note:"玄関ドア上からクイックル → ブレーカー上の埃 → 靴箱の拭きあげ" },
+  { id:"b13", icon:"🍃", label:"外回り",
+    note:"地面の掃き掃除 → 外ドアの拭きあげ → 外回りの枯葉掃除" },
+
+  // ⑤ 水回り（シャワー・トイレ）
+  { id:"bh5", section:true, label:"🚿 水回り（シャワー・トイレ）" },
+  { id:"b14", icon:"💨", label:"換気扇・天井・壁",
+    note:"換気扇動作確認 → 天井・壁のカビ・蜘蛛の巣確認（カビキラー対応）" },
+  { id:"b15", icon:"🚿", label:"シャワーフック・ヘッド",
+    note:"カビ・汚れ確認（汚れ時はカビキラー対応）" },
+  { id:"b16", icon:"🕳️", label:"排水溝",
+    note:"蓋・中のカップをブラシ洗い → 匂い・ぬめりがある場合はトイレハイターを流し放置" },
+  { id:"b17", icon:"🚽", label:"トイレ清掃",
+    note:"頑固な汚れはトイレハイターを流し込み放置 → 通常トイレ清掃" },
+  { id:"b18", icon:"🚪", label:"ドア内側カビ確認",
+    note:"カビがひどい場合はカビキラー塗りあげ" },
+  { id:"b19", icon:"✨", label:"シャワー壁・床・トイレ床の仕上げ",
+    note:"全体を洗い → お湯で全部流す → 拭きあげ → カビキラーした箇所は水多めの濡れ布巾で拭く" },
+  { id:"b20", icon:"🪞", label:"洗面台・金属・鏡",
+    note:"ベイシン洗い → 金属部分磨き → 鏡拭きあげ" },
+
+  // ⑥ 仕上げ
+  { id:"bh6", section:true, label:"✅ 仕上げ" },
+  { id:"b21", icon:"🐜", label:"アリ対策" },
+  { id:"b22", icon:"✨", label:"仕上げ確認" },
+
+  // 月1回メンテナンス
+  { id:"bh7", section:true, label:"📅 月1回メンテナンス" },
+  { id:"bm1", icon:"❄️", label:"エアコンフィルターの清掃", opt:"月1回" },
+];
+
+const TREEHOUSE_STEPS = [
   { id:"s1", icon:"🔍", label:"忘れ物チェック" },
+  { id:"s2", icon:"🧹", label:"室内の清掃" },
+  { id:"s3", icon:"💧", label:"クーラーの水捨て" },
+  { id:"s4", icon:"🛏️", label:"寝袋の回収または準備", opt:"寝袋オプション時" },
+  { id:"s5", icon:"🐜", label:"アリ対策" },
+  // 月1回メンテナンス
+  { id:"h1", section:true, label:"📅 月1回メンテナンス" },
+  { id:"m1", icon:"❄️", label:"エアコンフィルターの清掃", opt:"月1回" },
+];
+
+// セクション区切り付きコテージ詳細ステップ
+const COTTAGE_STEPS = [
+  // ① 入室チェック
+  { id:"h1", section:true, label:"🔑 入室チェック" },
+  { id:"s1", icon:"🔍", label:"忘れ物・破損・回収物の確認" },
+
+  // ② 寝具
+  { id:"h2", section:true, label:"🛏️ 寝具" },
   { id:"s2", icon:"🛏️", label:"寝具の撤収（ひっぺがし）" },
-  { id:"s3", icon:"🚿", label:"シャワー・トイレの清掃" },
-  { id:"s4", icon:"🧹", label:"フロアの清掃" },
-  { id:"s5", icon:"🛏️", label:"寝具のセッティング" },
-  { id:"s6", icon:"✨", label:"当日の仕上げ確認" },
-  { id:"s7", icon:"🐜", label:"アリ対策" },
+
+  // ③ リビングルーム
+  { id:"h3", section:true, label:"🛋️ リビングルーム" },
+  { id:"s3", icon:"🪶", label:"天井・カーテン",
+    note:"クイックルで届く範囲の埃落とし → カーテン汚れ確認" },
+  { id:"s4", icon:"❄️", label:"エアコン上部の埃取り" },
+  { id:"s5", icon:"🪑", label:"テーブル・椅子の拭きあげ" },
+  { id:"s6", icon:"🧹", label:"床の掃き・拭き掃除" },
+
+  // ④ キッチン（約30分）
+  { id:"h4", section:true, label:"🍳 キッチン（約30分）" },
+  { id:"s7",  icon:"🔆", label:"棚・照明・窓・木部分",
+    note:"台所上棚クイックル → 照明点灯確認 → 窓拭き → 木のフチ拭きあげ" },
+  { id:"s8",  icon:"🍳", label:"コンロ掃除" },
+  { id:"s9",  icon:"🍽️", label:"食器ラック・コップ類",
+    note:"食器ラック洗い → コップ類セット汚れ確認" },
+  { id:"s10", icon:"🚰", label:"引き出し・シンク",
+    note:"下引き出し埃チェック → シンク洗い → 拭きあげ" },
+  { id:"s11", icon:"❄️", label:"冷蔵庫",
+    note:"上クイックル → 中拭きあげ → 匂い確認" },
+  { id:"s12", icon:"📦", label:"ケトル・レンジ",
+    note:"ケトル底汚れ確認 → レンジ上クイックル・中確認" },
+  { id:"s13", icon:"🗑️", label:"ゴミ箱",
+    note:"ゴミ袋セット確認 → ゴミ箱下クイックル" },
+
+  // ⑤ 洗面所（5〜10分）
+  { id:"h5", section:true, label:"🪥 洗面所（5〜10分）" },
+  { id:"s14", icon:"🧹", label:"棚・壁の埃落とし",
+    note:"上からクイックル → 壁・木部分拭きあげ" },
+  { id:"s15", icon:"🪞", label:"鏡・洗面台・金属部分",
+    note:"鏡拭き → 洗面台洗い・拭きあげ → 蛇口等金属磨き" },
+
+  // ⑥ 洗濯機周り（約10分）
+  { id:"h6", section:true, label:"🫧 洗濯機周り（約10分）" },
+  { id:"s16", icon:"🪝", label:"天井ラック・壁",
+    note:"天井ラッククイックル → コンセント付近・壁・木部分拭きあげ" },
+  { id:"s17", icon:"🌀", label:"洗濯機・洗濯機下周り・排水溝トラップチェック",
+    note:"外側拭きあげ → フィルター2個確認・洗浄（定期：槽洗浄） → 洗濯機下周り清掃 → 排水溝トラップチェック → 洗濯バン拭きあげ" },
+
+  // ⑦ シャワー室（約30分）
+  { id:"h7", section:true, label:"🚿 シャワー室（約30分）" },
+  { id:"s18", icon:"🧱", label:"天井・壁・ドア",
+    note:"天井から壁クイックル → カビ汚れチェック（カビキラー散布・ブラシ） → ドアカビ・水垢チェック" },
+  { id:"s19", icon:"🪟", label:"窓サッシ・床",
+    note:"サッシ汚れチェック → 床目地のカビ・赤カビ確認（カビキラー対応）" },
+  { id:"s20", icon:"🧴", label:"石鹸受け・排水溝",
+    note:"ぬめり・水垢チェック → 受け皿ゴミ処分 → 排水パイプブラシ洗い → ハイター放置" },
+  { id:"s20b", icon:"🕳️", label:"排水溝トラップチェック" },
+  { id:"s21", icon:"✨", label:"仕上げ（お湯で流す・磨く）",
+    note:"天井からお湯で流す → 金属部分磨き → 髪の毛・汚れ最終チェック" },
+
+  // ⑧ トイレ（約15分）
+  { id:"h8", section:true, label:"🚽 トイレ（約15分）" },
+  { id:"s22", icon:"🌬️", label:"換気扇・壁・木部分",
+    note:"換気扇動作確認 → 壁・木部分拭きあげ" },
+  { id:"s23", icon:"🚽", label:"便器・手すり・手洗い",
+    note:"便器掃除 → 手すり・手洗い掃除 → 水を流す" },
+  { id:"s24", icon:"🕳️", label:"排水溝・床",
+    note:"蓋・内部品ブラシ洗い（匂い時はハイター放置→流す・カップに水セット） → 床拭きあげ" },
+  { id:"s24b", icon:"🔍", label:"排水溝トラップチェック" },
+
+  // ⑨ 仕上げ
+  { id:"h9", section:true, label:"✅ 仕上げ" },
+  { id:"s25", icon:"🛏️", label:"寝具のセッティング" },
+  { id:"s26", icon:"🪟", label:"窓の清掃" },
+  { id:"s27", icon:"🚪", label:"玄関の清掃（最後）" },
+  { id:"s28", icon:"🐜", label:"アリ対策" },
+  { id:"s29", icon:"🕳️", label:"排水溝トラップチェック（全箇所）" },
+
+  // ⑩ 月1回メンテナンス
+  { id:"h10", section:true, label:"📅 月1回メンテナンス" },
+  { id:"m1", icon:"💨", label:"換気扇の清掃", opt:"月1回",
+    note:"キッチン・トイレ・シャワー室" },
+  { id:"m2", icon:"❄️", label:"エアコンフィルターの清掃", opt:"月1回" },
 ];
 
 const FACILITIES = [
@@ -781,73 +950,31 @@ const FACILITIES = [
     id: "muribushi", cat: "cottage",
     type: "星のコテージ", nameEn: "MURIBUSHI", nameJp: "むりぶし",
     icon: "⭐", iconBg: "#fffde7",
-    steps: [
-      { id:"s1",  icon:"🔍", label:"忘れ物チェック" },
-      { id:"s2",  icon:"🛏️", label:"寝具の撤収（ひっぺがし）" },
-      { id:"s3",  icon:"🚿", label:"シャワー室の清掃" },
-      { id:"s4",  icon:"🚽", label:"トイレの清掃" },
-      { id:"s5",  icon:"🧹", label:"フロアの清掃" },
-      { id:"s6",  icon:"🍳", label:"キッチンの清掃" },
-      { id:"s7",  icon:"❄️", label:"冷蔵庫等備品の清掃" },
-      { id:"s8",  icon:"🚪", label:"玄関の清掃" },
-      { id:"s9",  icon:"🌿", label:"外デッキの清掃" },
-      { id:"s10", icon:"🛏️", label:"寝具のセッティング" },
-      { id:"s11", icon:"🐜", label:"アリ対策" },
-    ],
+    steps: COTTAGE_STEPS,
   },
   {
     id: "ninufa", cat: "cottage",
     type: "星のコテージ", nameEn: "NINUFABUSHI", nameJp: "にぬふぁぶし",
     icon: "⭐", iconBg: "#fffde7",
-    steps: [
-      { id:"s1",  icon:"🔍", label:"忘れ物チェック" },
-      { id:"s2",  icon:"🛏️", label:"寝具の撤収（ひっぺがし）" },
-      { id:"s3",  icon:"🚿", label:"シャワー室の清掃" },
-      { id:"s4",  icon:"🚽", label:"トイレの清掃" },
-      { id:"s5",  icon:"🧹", label:"フロアの清掃" },
-      { id:"s6",  icon:"🍳", label:"キッチンの清掃" },
-      { id:"s7",  icon:"❄️", label:"冷蔵庫等備品の清掃" },
-      { id:"s8",  icon:"🚪", label:"玄関の清掃" },
-      { id:"s9",  icon:"🌿", label:"外デッキの清掃" },
-      { id:"s10", icon:"🛏️", label:"寝具のセッティング" },
-      { id:"s11", icon:"🐜", label:"アリ対策" },
-    ],
+    steps: COTTAGE_STEPS,
   },
   {
     id: "tree3", cat: "treehouse",
     type: "樹上ハウス", nameEn: "TREE HOUSE No.3", nameJp: "No.3",
     icon: "🌳", iconBg: "#e8f5e9",
-    steps: [
-      { id:"s1", icon:"🔍", label:"忘れ物チェック" },
-      { id:"s2", icon:"🧹", label:"室内の清掃" },
-      { id:"s3", icon:"💧", label:"クーラーの水捨て" },
-      { id:"s4", icon:"🛏️", label:"寝袋の回収または準備", opt:"寝袋オプション時" },
-      { id:"s5", icon:"🐜", label:"アリ対策" },
-    ],
+    steps: TREEHOUSE_STEPS,
   },
   {
     id: "tree4", cat: "treehouse",
     type: "樹上ハウス", nameEn: "TREE HOUSE No.4", nameJp: "No.4",
     icon: "🌳", iconBg: "#e8f5e9",
-    steps: [
-      { id:"s1", icon:"🔍", label:"忘れ物チェック" },
-      { id:"s2", icon:"🧹", label:"室内の清掃" },
-      { id:"s3", icon:"💧", label:"クーラーの水捨て" },
-      { id:"s4", icon:"🛏️", label:"寝袋の回収または準備", opt:"寝袋オプション時" },
-      { id:"s5", icon:"🐜", label:"アリ対策" },
-    ],
+    steps: TREEHOUSE_STEPS,
   },
   {
     id: "tree5", cat: "treehouse",
     type: "樹上ハウス", nameEn: "TREE HOUSE No.5", nameJp: "No.5",
     icon: "🌳", iconBg: "#e8f5e9",
-    steps: [
-      { id:"s1", icon:"🔍", label:"忘れ物チェック" },
-      { id:"s2", icon:"🧹", label:"室内の清掃" },
-      { id:"s3", icon:"💧", label:"クーラーの水捨て" },
-      { id:"s4", icon:"🛏️", label:"寝袋の回収または準備", opt:"寝袋オプション時" },
-      { id:"s5", icon:"🐜", label:"アリ対策" },
-    ],
+    steps: TREEHOUSE_STEPS,
   },
   {
     id: "akahige", cat: "cabin",
@@ -963,11 +1090,14 @@ function showSyncStatus(msg, type) {
   el.className = 'sync-status sync-' + type;
 }
 
+// セクション行（section:true）はチェック対象外
+function checkableSteps(f) { return f.steps.filter(s => !s.section); }
+
 function getFacilityStatus(fid) {
   const f = FACILITIES.find(x => x.id === fid);
   const s = state[fid];
   if (!f || !s) return "dirty";
-  const total = f.steps.length;
+  const total = checkableSteps(f).length;
   const done  = Object.values(s.checked).filter(Boolean).length;
   if (done === 0)     return "dirty";
   if (done === total) return "done";
@@ -978,7 +1108,7 @@ function getProgress(fid) {
   const f = FACILITIES.find(x => x.id === fid);
   const s = state[fid];
   if (!f || !s) return { done: 0, total: 0 };
-  return { done: Object.values(s.checked).filter(Boolean).length, total: f.steps.length };
+  return { done: Object.values(s.checked).filter(Boolean).length, total: checkableSteps(f).length };
 }
 
 // ── CLOCK ──────────────────────────────────────────────────────
@@ -1035,11 +1165,14 @@ function renderGrid() {
     const badgeClass = status === 'done' ? 'badge-done' : status === 'wip' ? 'badge-wip' : 'badge-dirty';
     const badgeText  = status === 'done' ? '✅ 使用可' : status === 'wip' ? '⚙️ 清掃中' : '— 清掃待ち';
 
-    // ステップ一覧（チェック者バッジ付き）
+    // ステップ一覧（セクション区切り・詳細メモ・チェック者バッジ付き）
     const stepsHtml = f.steps.map(step => {
-      const checked = s.checked[step.id] || false;
+      // セクションヘッダーはチェックなし
+      if (step.section) {
+        return `<div class="step-section">${step.label}</div>`;
+      }
+      const checked    = s.checked[step.id] || false;
       const checkerRaw = (checked && s.checkedBy?.[step.id]) ? s.checkedBy[step.id] : null;
-      // 後方互換: 旧形式(文字列)と新形式({name,at})の両方に対応
       const checkerName = checkerRaw ? (typeof checkerRaw === 'string' ? checkerRaw : checkerRaw.name) : null;
       const checkerAt   = checkerRaw?.at ? (() => {
         const d = new Date(checkerRaw.at);
@@ -1053,6 +1186,7 @@ function renderGrid() {
             <span class="step-label">${step.label}</span>
             ${step.opt ? `<span class="step-opt">${step.opt}</span>` : ''}
           </div>
+          ${step.note ? `<div class="step-note">${step.note}</div>` : ''}
           ${checkerName ? `<div class="step-checker"><span>✓ ${checkerName}${checkerAt ? ` · ${checkerAt}` : ''}</span></div>` : ''}
         </div>`;
     }).join('');
@@ -1179,7 +1313,7 @@ function completeAll(fid) {
   const f = FACILITIES.find(x => x.id === fid);
   if (!state[fid]) state[fid] = defaultFacilityState();
   if (!state[fid].checkedBy) state[fid].checkedBy = {};
-  f.steps.forEach(s => {
+  checkableSteps(f).forEach(s => {
     if (!state[fid].checked[s.id]) {
       state[fid].checked[s.id] = true;
       state[fid].checkedBy[s.id] = { name: myStaff, at: new Date().toISOString() };
@@ -1295,4 +1429,3 @@ setInterval(() => { loadFromGAS(); }, 30000);
 </script>
 </body>
 </html>
-
