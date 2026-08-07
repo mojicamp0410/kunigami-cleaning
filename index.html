@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>国頭村森林公園 清掃管理</title>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -118,6 +121,24 @@ body {
   transition: background .15s;
 }
 .btn-reset-all:hover { background: rgba(255,255,255,.22); }
+.btn-diag {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.25);
+  color: white;
+  padding: .3rem .5rem;
+  border-radius: 4px;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: background .15s;
+  line-height: 1;
+}
+.btn-diag:hover { background: rgba(255,255,255,.22); }
+.app-ver {
+  font-size: .6rem;
+  color: rgba(255,255,255,.45);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: .03em;
+}
 
 /* スタッフ未選択アラート */
 .staff-alert {
@@ -248,6 +269,7 @@ body {
 .badge-dirty { background: #f0f0f0; color: #888; }
 .badge-wip   { background: #fff3cd; color: #856404; }
 .badge-done  { background: var(--done-lt); color: var(--done); }
+.badge-quick { background: #fff0c8; color: #8a6200; border: 1px solid #e8c84b; }
 
 /* ── チェックイン日時 ── */
 .checkin-row {
@@ -571,6 +593,16 @@ body {
   align-items: center;
   gap: .3rem;
 }
+.memo-by {
+  font-size: .68rem;
+  color: var(--green);
+  background: var(--done-lt);
+  border-radius: 5px;
+  padding: .2rem .5rem;
+  margin-bottom: .3rem;
+  display: inline-block;
+  font-weight: 600;
+}
 .memo-textarea {
   width: 100%;
   min-height: 64px;
@@ -619,6 +651,8 @@ body {
   .clock             { font-size: .75rem; padding: .25rem .5rem; }
   .sync-status       { font-size: .68rem; padding: .2rem .5rem; }
   .btn-reset-all     { font-size: .7rem; padding: .28rem .6rem; }
+  .btn-diag          { font-size: .75rem; padding: .28rem .45rem; }
+  .app-ver           { font-size: .55rem; }
 
   /* ── スタッフアラート ── */
   .staff-alert { font-size: .78rem; padding: .5rem .9rem; }
@@ -704,6 +738,9 @@ body {
     <div class="sync-status sync-loading" id="syncStatus">🔄 読み込み中...</div>
     <div class="clock" id="clock">--:--</div>
     <button class="btn-reset-all" onclick="resetAll()">全リセット</button>
+    <button class="btn-diag" onclick="forceRefresh()" title="最新版に更新">⟳</button>
+    <button class="btn-diag" onclick="showDiagnostics()" title="診断情報">🩺</button>
+    <span class="app-ver" id="appVer"></span>
   </div>
 </header>
 
@@ -731,14 +768,48 @@ body {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
+const APP_VERSION = "5.0.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
+const SCHEMA_VER  = 5;        // stateの構造バージョン
 const STAFF_LIST = ["MOJI", "かずな", "たくま", "さり", "あやこ", "かずこ"];
 const STAFF_KEY  = "kfp_my_staff";
 const LOCAL_KEY  = "kfp_cleaning_v4_local";
+const VER_KEY    = "kfp_app_version";
+const DEVICE_KEY = "kfp_device_id";
 const GAS_URL    = "https://script.google.com/macros/s/AKfycbxbq418PrCgUoz-uReeIK8SGYrnRdHlzxKcgjgAAHDJvQbFnL-q4OvbGIQqrZs9mmmH/exec";
 
 let myStaff  = localStorage.getItem(STAFF_KEY) || "";
 let state    = {};
-let isSyncing = false;
+let isSyncing    = false;
+let savePending  = false;   // 保存中に来た変更を取りこぼさないフラグ
+let lastSyncOk   = null;    // 最終同期成功時刻
+let lastSyncErr  = null;    // 最終エラー内容
+
+// デバイス識別子（どの端末からの記録か判別用）
+let deviceId = localStorage.getItem(DEVICE_KEY);
+if (!deviceId) {
+  deviceId = 'd' + Math.random().toString(36).slice(2, 8);
+  localStorage.setItem(DEVICE_KEY, deviceId);
+}
+
+// ── JST基準の日時ヘルパー（端末のタイムゾーン差を吸収）──────────
+function jstNow() {
+  return new Date(Date.now() + (new Date().getTimezoneOffset() * 60000) + (9 * 3600000));
+}
+function jstDateStr(d) {
+  const t = d || jstNow();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+}
+
+// ── バージョン差分チェック（古いキャッシュの検知）──────────────
+function checkVersion() {
+  const stored = localStorage.getItem(VER_KEY);
+  if (stored && stored !== APP_VERSION) {
+    // アプリが更新された → 古いstateを新スキーマへ移行
+    console.log(`[KFP] バージョン更新: ${stored} → ${APP_VERSION}`);
+  }
+  localStorage.setItem(VER_KEY, APP_VERSION);
+}
+checkVersion();
 
 // ── スタッフ選択 ───────────────────────────────────────────────
 function initStaffSelect() {
@@ -1004,7 +1075,30 @@ const FACILITIES = [
 
 // ── STATE ──────────────────────────────────────────────────────
 function defaultFacilityState() {
-  return { checked: {}, checkedBy: {}, completedAt: null, completedBy: null, memo: "", laundry: false, nextCheckin: "" };
+  return { checked: {}, checkedBy: {}, completedAt: null, completedBy: null,
+           completedMode: null, memo: "", memoBy: null, memoAt: null,
+           laundry: false, nextCheckin: "", lastResetDate: null,
+           updatedAt: 0, schema: SCHEMA_VER };
+}
+
+// 古いデータに新フィールドを補完する（デバイス間の表示差の主因を解消）
+function migrateFacilityState(raw) {
+  const base = defaultFacilityState();
+  if (!raw || typeof raw !== 'object') return base;
+  const merged = { ...base, ...raw };
+  // 型の保証（壊れたデータでも落ちないように）
+  if (typeof merged.checked   !== 'object' || merged.checked   === null) merged.checked   = {};
+  if (typeof merged.checkedBy !== 'object' || merged.checkedBy === null) merged.checkedBy = {};
+  if (typeof merged.memo      !== 'string') merged.memo = '';
+  if (typeof merged.updatedAt !== 'number') merged.updatedAt = 0;
+  merged.schema = SCHEMA_VER;
+  return merged;
+}
+
+// 変更のたびに更新時刻を刻む（マージ判定に使用）
+function touch(fid) {
+  if (!state[fid]) state[fid] = defaultFacilityState();
+  state[fid].updatedAt = Date.now();
 }
 
 function initState() {
@@ -1030,57 +1124,159 @@ function captureMemos() {
 async function loadFromGAS() {
   showSyncStatus("🔄 データを読み込み中...", "loading");
   try {
-    const res  = await fetch(`${GAS_URL}?action=load`);
+    // キャッシュ回避のため毎回異なるパラメータを付与
+    const res = await fetch(`${GAS_URL}?action=load&_=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
+
     if (json.status === "ok" && json.data && json.data !== "{}") {
       const remote = JSON.parse(json.data);
-      // 入力中・未保存のメモはGASデータで上書きしない
       const activeEl = document.activeElement;
-      const activeCheckinId = (activeEl?.classList.contains('checkin-input')) ? activeEl.id.replace('checkin-', '') : null;
+      const activeCheckinId = activeEl?.classList?.contains('checkin-input')
+        ? activeEl.id.replace('checkin-', '') : null;
+
       FACILITIES.forEach(f => {
-        const r = remote[f.id] || defaultFacilityState();
-        // pendingMemoFids に入っている（未保存）か、今まさに入力中のメモは保持
-        if (pendingMemoFids.has(f.id) || activeEl?.id === `memo-${f.id}`) {
-          r.memo = state[f.id]?.memo ?? r.memo;
+        const r = migrateFacilityState(remote[f.id]);
+        const l = state[f.id] ? migrateFacilityState(state[f.id]) : null;
+
+        // ★ローカルの方が新しい変更を持っている場合はローカルを優先（上書き事故の防止）
+        let next;
+        if (l && l.updatedAt > (r.updatedAt || 0)) {
+          next = l;
+        } else {
+          next = r;
         }
-        if (f.id === activeCheckinId) r.nextCheckin = state[f.id]?.nextCheckin ?? r.nextCheckin;
-        state[f.id] = r;
+
+        // 入力途中のメモ・日付は絶対に上書きしない
+        if (pendingMemoFids.has(f.id) || activeEl?.id === `memo-${f.id}`) {
+          next = { ...next, memo: state[f.id]?.memo ?? next.memo,
+                            memoBy: state[f.id]?.memoBy ?? next.memoBy,
+                            memoAt: state[f.id]?.memoAt ?? next.memoAt };
+        }
+        if (f.id === activeCheckinId) {
+          next = { ...next, nextCheckin: state[f.id]?.nextCheckin ?? next.nextCheckin };
+        }
+        state[f.id] = next;
       });
       saveLocal();
-    } else {
+      lastSyncOk = new Date();
+      lastSyncErr = null;
+      showSyncStatus("✅ 同期済み", "ok");
+    } else if (json.status === "ok") {
+      // リモートが空 → ローカルを正とする
       loadFromLocal();
+      lastSyncOk = new Date();
+      showSyncStatus("✅ 同期済み", "ok");
+    } else {
+      throw new Error(json.message || 'GASエラー');
     }
-    showSyncStatus("✅ 同期済み", "ok");
   } catch(e) {
     loadFromLocal();
+    lastSyncErr = e.message;
     showSyncStatus("⚠️ オフライン（ローカルデータを使用）", "warn");
+    console.warn('[KFP] load失敗:', e);
   }
   render();
 }
 
 async function saveToGAS() {
-  if (isSyncing) return;
+  // ★保存中に来た変更は捨てずにキューへ（従来は黙って消えていた）
+  if (isSyncing) { savePending = true; return; }
   isSyncing = true;
   showSyncStatus("🔄 保存中...", "loading");
-  try {
-    const data = JSON.stringify(state);
-    await fetch(`${GAS_URL}?action=save&data=${encodeURIComponent(data)}`);
-    saveLocal();
+
+  let ok = false;
+  for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
+    try {
+      const data = JSON.stringify(state);
+      // ★POSTで送信（GETのURL長制限による保存失敗を回避）
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'save', data, device: deviceId, version: APP_VERSION }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json().catch(() => ({ status: 'ok' }));
+      if (json.status && json.status !== 'ok') throw new Error(json.message || '保存エラー');
+      ok = true;
+    } catch(e) {
+      lastSyncErr = e.message;
+      console.warn(`[KFP] save失敗 (${attempt}/3):`, e);
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 600));
+    }
+  }
+
+  saveLocal();
+  if (ok) {
+    lastSyncOk = new Date();
+    lastSyncErr = null;
     showSyncStatus("✅ 全デバイスに同期済み", "ok");
-  } catch(e) {
-    saveLocal();
-    showSyncStatus("⚠️ オフライン（ローカルに保存）", "warn");
+  } else {
+    showSyncStatus("⚠️ 保存できません（ローカルのみ）", "warn");
   }
   isSyncing = false;
+
+  // キューに溜まった変更を保存
+  if (savePending) { savePending = false; saveToGAS(); }
 }
 
 function loadFromLocal() {
   try {
     const s = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
     FACILITIES.forEach(f => {
-      state[f.id] = s[f.id] || defaultFacilityState();
+      state[f.id] = migrateFacilityState(s[f.id]);
     });
   } catch(e) { initState(); }
+}
+
+// ── 作業ログ記録（スプレッドシートへ追記）──────────────────────
+const LOG_QUEUE_KEY = "kfp_log_queue";
+
+function logActivity({ action, facility, step, detail }) {
+  const entry = {
+    at:       new Date().toISOString(),
+    staff:    myStaff || '(未選択)',
+    facility: facility || '',
+    action:   action || '',
+    step:     step || '',
+    detail:   detail || '',
+    device:   deviceId,
+    version:  APP_VERSION,
+  };
+  // オフラインでも失わないようキューに積む
+  const queue = getLogQueue();
+  queue.push(entry);
+  localStorage.setItem(LOG_QUEUE_KEY, JSON.stringify(queue.slice(-500)));
+  flushLogQueue();
+}
+
+function getLogQueue() {
+  try { return JSON.parse(localStorage.getItem(LOG_QUEUE_KEY) || "[]"); }
+  catch(e) { return []; }
+}
+
+let flushingLogs = false;
+async function flushLogQueue() {
+  if (flushingLogs) return;
+  const queue = getLogQueue();
+  if (!queue.length) return;
+  flushingLogs = true;
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'log', entries: queue }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json().catch(() => ({ status: 'ok' }));
+    if (json.status && json.status !== 'ok') throw new Error(json.message || 'ログ保存エラー');
+    // 送信できた分だけキューから除去（送信中に増えた分は残す）
+    const now = getLogQueue();
+    localStorage.setItem(LOG_QUEUE_KEY, JSON.stringify(now.slice(queue.length)));
+  } catch(e) {
+    console.warn('[KFP] ログ送信失敗（次回リトライ）:', e);
+  }
+  flushingLogs = false;
 }
 
 function showSyncStatus(msg, type) {
@@ -1097,6 +1293,8 @@ function getFacilityStatus(fid) {
   const f = FACILITIES.find(x => x.id === fid);
   const s = state[fid];
   if (!f || !s) return "dirty";
+  // 一括完了またはチェックリスト完了はどちらも "done"
+  if (s.completedMode) return "done";
   const total = checkableSteps(f).length;
   const done  = Object.values(s.checked).filter(Boolean).length;
   if (done === 0)     return "dirty";
@@ -1134,15 +1332,18 @@ function renderOverview() {
   strip.innerHTML = FACILITIES.map(f => {
     const status = getFacilityStatus(f.id);
     const { done, total } = getProgress(f.id);
-    const statusText = status === 'done' ? '✅ 使用可' :
+    const cmode = state[f.id]?.completedMode;
+    const statusText = cmode === 'quick' ? '📋 一括完了' :
+                       status === 'done' ? '✅ 使用可' :
                        status === 'wip'  ? `${done}/${total}` : '清掃待ち';
+    const statusColor = cmode === 'quick' ? '#c8960a' :
+                        status === 'done' ? '#4caf50' :
+                        status === 'wip'  ? '#e8b84b' : 'rgba(255,255,255,.6)';
     const laundryMark = (f.cat === 'cottage' && state[f.id]?.laundry) ? ' 👕' : '';
     return `
       <div class="ov-chip ${status}" onclick="scrollToCard('${f.id}')">
         <div class="ov-name">${f.icon} ${f.nameJp}${laundryMark}</div>
-        <div class="ov-status" style="color:${
-          status==='done' ? '#4caf50' : status==='wip' ? '#e8b84b' : 'rgba(255,255,255,.6)'
-        }">${statusText}</div>
+        <div class="ov-status" style="color:${statusColor}">${statusText}</div>
       </div>`;
   }).join('');
 }
@@ -1162,8 +1363,13 @@ function renderGrid() {
     const pct = total ? Math.round(done / total * 100) : 0;
     const s   = state[f.id];
 
-    const badgeClass = status === 'done' ? 'badge-done' : status === 'wip' ? 'badge-wip' : 'badge-dirty';
-    const badgeText  = status === 'done' ? '✅ 使用可' : status === 'wip' ? '⚙️ 清掃中' : '— 清掃待ち';
+    const cmode = s?.completedMode;
+    const badgeClass = cmode === 'quick' ? 'badge-quick' :
+                       status === 'done' ? 'badge-done' :
+                       status === 'wip'  ? 'badge-wip' : 'badge-dirty';
+    const badgeText  = cmode === 'quick' ? '📋 一括完了' :
+                       status === 'done' ? '✅ 使用可' :
+                       status === 'wip'  ? '⚙️ 清掃中' : '— 清掃待ち';
 
     // ステップ一覧（セクション区切り・詳細メモ・チェック者バッジ付き）
     const stepsHtml = f.steps.map(step => {
@@ -1201,13 +1407,24 @@ function renderGrid() {
         </button>
       </div>` : '';
 
-    // 完了スタンプ（完了者・完了時刻）
+    // 完了スタンプ（完了者・完了時刻・モード）
     const ts = s.completedAt ? new Date(s.completedAt).toLocaleString('ja-JP',{
       month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'
     }) : '';
+    const modeLabel = s.completedMode === 'quick' ? ' 〔一括〕' :
+                      s.completedMode === 'checklist' ? ' 〔全ステップ〕' : '';
     const completedByLine = s.completedBy
-      ? `<div class="stamp-by">${s.completedBy} が確認 · ${ts}</div>`
-      : (ts ? `<div class="stamp-by">${ts}</div>` : '');
+      ? `<div class="stamp-by">${s.completedBy} が確認${modeLabel} · ${ts}</div>`
+      : (ts ? `<div class="stamp-by">${ts}${modeLabel}</div>` : '');
+
+    // メモ記入者・記入日時
+    const memoTs = s.memoAt ? (() => {
+      const d = new Date(s.memoAt);
+      return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    })() : '';
+    const memoByLine = (s.memo || '').trim()
+      ? `<div class="memo-by">✍️ ${s.memoBy || '記入者不明'}${memoTs ? ` · ${memoTs}` : ''}</div>`
+      : '';
 
     return `
       <div class="card status-${status}" id="card-${f.id}">
@@ -1246,6 +1463,7 @@ function renderGrid() {
         <div class="steps">${stepsHtml}</div>
         <div class="memo-wrap">
           <div class="memo-label">📝 引き継ぎメモ</div>
+          ${memoByLine}
           <textarea
             class="memo-textarea"
             id="memo-${f.id}"
@@ -1256,9 +1474,9 @@ function renderGrid() {
         </div>
         <div class="card-footer">
           <button class="btn-action btn-complete"
-            onclick="completeAll('${f.id}')"
+            onclick="quickComplete('${f.id}')"
             ${status === 'done' ? 'disabled' : ''}>
-            🎯 全工程完了にする
+            📋 一括完了
           </button>
           <div class="ready-stamp">
             <div><span class="stamp-icon">✅</span> 使用可能です</div>
@@ -1294,75 +1512,99 @@ function toggleStep(fid, sid) {
     delete state[fid].checkedBy[sid];
   }
 
+  const f = FACILITIES.find(x => x.id === fid);
+  const stepDef = f?.steps.find(x => x.id === sid);
+
   const { done, total } = getProgress(fid);
   if (done === total && total > 0) {
     state[fid].completedAt = new Date().toISOString();
     state[fid].completedBy = myStaff;
-    const f = FACILITIES.find(x => x.id === fid);
+    state[fid].completedMode = 'checklist';
     showToast(`✅ ${f.nameJp} 清掃完了！使用可能です`);
   } else {
     state[fid].completedAt = null;
     state[fid].completedBy = null;
+    state[fid].completedMode = null;
   }
+  touch(fid);
   render();
   saveToGAS();
+
+  // 作業ログをスプレッドシートに記録
+  logActivity({
+    action: state[fid].checked[sid] ? 'step_check' : 'step_uncheck',
+    facility: f?.nameJp || fid,
+    step: stepDef?.label || sid,
+    detail: `${done}/${total}`,
+  });
 }
 
-function completeAll(fid) {
+function quickComplete(fid) {
   if (!requireStaff()) return;
   const f = FACILITIES.find(x => x.id === fid);
+  if (!confirm(`${f.nameJp} を一括完了にしますか？\n（個別ステップはチェックされません）`)) return;
   if (!state[fid]) state[fid] = defaultFacilityState();
-  if (!state[fid].checkedBy) state[fid].checkedBy = {};
-  checkableSteps(f).forEach(s => {
-    if (!state[fid].checked[s.id]) {
-      state[fid].checked[s.id] = true;
-      state[fid].checkedBy[s.id] = { name: myStaff, at: new Date().toISOString() };
-    }
-  });
   state[fid].completedAt = new Date().toISOString();
   state[fid].completedBy = myStaff;
+  state[fid].completedMode = 'quick';
+  touch(fid);
   render();
   saveToGAS();
-  showToast(`✅ ${f.nameJp} 使用可能になりました！`);
+  showToast(`📋 ${f.nameJp} 一括完了しました`);
+  logActivity({ action: 'quick_complete', facility: f.nameJp, step: '', detail: '一括完了' });
 }
 
 function resetCard(fid) {
   const f = FACILITIES.find(x => x.id === fid);
   if (!confirm(`${f.nameJp} の清掃状況をリセットしますか？\n※メモは残ります`)) return;
   const memo    = state[fid]?.memo    || '';
+  const memoBy  = state[fid]?.memoBy  || null;
+  const memoAt  = state[fid]?.memoAt  || null;
   const laundry = state[fid]?.laundry || false;
-  state[fid] = { ...defaultFacilityState(), memo, laundry };
+  state[fid] = { ...defaultFacilityState(), memo, memoBy, memoAt, laundry };
+  touch(fid);
   render();
   saveToGAS();
   showToast(`↺ ${f.nameJp} をリセットしました`);
+  logActivity({ action: 'reset', facility: f.nameJp, step: '', detail: '手動リセット' });
 }
 
 function resetAll() {
   if (!confirm('全施設の清掃状況をリセットしますか？\n（朝のリセット用・メモは残ります）')) return;
   FACILITIES.forEach(f => {
     const memo    = state[f.id]?.memo    || '';
+    const memoBy  = state[f.id]?.memoBy  || null;
+    const memoAt  = state[f.id]?.memoAt  || null;
     const laundry = state[f.id]?.laundry || false;
-    state[f.id] = { ...defaultFacilityState(), memo, laundry };
+    state[f.id] = { ...defaultFacilityState(), memo, memoBy, memoAt, laundry };
+    touch(f.id);
   });
   render();
   saveToGAS();
   showToast('↺ 全施設をリセットしました');
+  logActivity({ action: 'reset_all', facility: '全施設', step: '', detail: '手動全リセット' });
 }
 
 function toggleLaundry(fid) {
   if (!state[fid]) state[fid] = defaultFacilityState();
   state[fid].laundry = !state[fid].laundry;
+  touch(fid);
   render();
   saveToGAS();
   const f = FACILITIES.find(x => x.id === fid);
   showToast(state[fid].laundry ? `👕 ${f.nameJp}: 洗濯物を干しています` : `✓ ${f.nameJp}: 洗濯物なし`);
+  logActivity({ action: 'laundry', facility: f.nameJp, step: '',
+                detail: state[fid].laundry ? '干している' : 'なし' });
 }
 
 function saveCheckin(fid, val) {
   if (!state[fid]) state[fid] = defaultFacilityState();
   state[fid].nextCheckin = val;
+  touch(fid);
   render();
   saveToGAS();
+  const f = FACILITIES.find(x => x.id === fid);
+  logActivity({ action: 'checkin_set', facility: f?.nameJp || fid, step: '', detail: val || 'クリア' });
 }
 
 // メモ自動保存（800ms後）
@@ -1376,6 +1618,15 @@ function saveMemo(fid) {
 
   // ① キー入力のたびにstateを即時更新（DOMが消える前に確保）
   state[fid].memo = el.value;
+  // 記入者・記入日時を記録（空欄にした場合はクリア）
+  if (el.value.trim()) {
+    state[fid].memoBy = myStaff || null;
+    state[fid].memoAt = new Date().toISOString();
+  } else {
+    state[fid].memoBy = null;
+    state[fid].memoAt = null;
+  }
+  touch(fid);
   pendingMemoFids.add(fid); // 未保存フラグON
   saveLocal();               // ローカルにも即保存
 
@@ -1389,6 +1640,11 @@ function saveMemo(fid) {
       savedEl.textContent = '✓ 全デバイスに保存しました';
       savedEl.style.opacity = '1';
       setTimeout(() => { savedEl.style.opacity = '0'; }, 2000);
+    }
+    const f = FACILITIES.find(x => x.id === fid);
+    if (el.value.trim()) {
+      logActivity({ action: 'memo', facility: f?.nameJp || fid, step: '',
+                    detail: el.value.slice(0, 200) });
     }
   }, 800);
 }
@@ -1422,10 +1678,102 @@ initStaffSelect();
 initState();
 loadFromLocal();
 render();
-loadFromGAS();
+const verEl = document.getElementById('appVer');
+if (verEl) verEl.textContent = `v${APP_VERSION}`;
+// ── AUTO RESET（毎日10:00に全施設リセット）──────────────────────
+function checkAutoReset() {
+  const now = jstNow();                        // ★JST基準（端末の時計設定に依存しない）
+  if (now.getHours() < 10) return;             // 10:00前は何もしない
+
+  const today = jstDateStr(now);               // "2026-08-06" 形式
+  let changed = false;
+
+  FACILITIES.forEach(f => {
+    const s = state[f.id];
+    if (!s) return;
+    if (s.lastResetDate === today) return;     // 今日すでにリセット済み
+
+    // メモ・次回チェックイン日は保持、それ以外をリセット
+    state[f.id] = {
+      ...defaultFacilityState(),
+      memo: s.memo || '',
+      memoBy: s.memoBy || null,
+      memoAt: s.memoAt || null,
+      nextCheckin: s.nextCheckin || '',
+      lastResetDate: today,
+      updatedAt: Date.now(),               // ★他デバイスへ確実に伝播させる
+      schema: SCHEMA_VER,
+    };
+    changed = true;
+  });
+
+  if (changed) {
+    saveLocal();
+    saveToGAS();
+    render();
+    showToast('🔄 10:00 チェックアウト時刻です。全施設をリセットしました');
+    logActivity({ action: 'auto_reset', facility: '全施設', step: '', detail: `10:00自動リセット (${today})` });
+  }
+}
+
+// ── 診断パネル（デバイス間の差異を調べるため）──────────────────
+function showDiagnostics() {
+  const lines = [];
+  lines.push(`アプリ版数 : ${APP_VERSION}`);
+  lines.push(`スキーマ   : v${SCHEMA_VER}`);
+  lines.push(`端末ID     : ${deviceId}`);
+  lines.push(`担当者     : ${myStaff || '(未選択)'}`);
+  lines.push(`現在時刻   : ${jstNow().toLocaleString('ja-JP')} (JST換算)`);
+  lines.push(`最終同期   : ${lastSyncOk ? lastSyncOk.toLocaleString('ja-JP') : '未同期'}`);
+  lines.push(`直近エラー : ${lastSyncErr || 'なし'}`);
+  lines.push(`未送信ログ : ${getLogQueue().length} 件`);
+  lines.push(`未保存メモ : ${pendingMemoFids.size} 件`);
+  lines.push('');
+  lines.push('── 施設別の最終更新 ──');
+  FACILITIES.forEach(f => {
+    const s = state[f.id] || {};
+    const u = s.updatedAt ? new Date(s.updatedAt).toLocaleString('ja-JP') : '—';
+    const st = getFacilityStatus(f.id);
+    lines.push(`${f.nameJp}: ${st}${s.completedMode ? `(${s.completedMode})` : ''} / 更新 ${u}`);
+  });
+  lines.push('');
+  lines.push('※他の端末と「アプリ版数」が違う場合は、その端末で');
+  lines.push('　ページを再読み込み（更新）してください。');
+
+  const text = lines.join('\n');
+  if (confirm(text + '\n\n[OK] でこの内容をコピーします')) {
+    navigator.clipboard?.writeText(text)
+      .then(() => showToast('📋 診断情報をコピーしました'))
+      .catch(() => {});
+  }
+}
+
+// 強制リフレッシュ（キャッシュを捨てて最新版を取得）
+function forceRefresh() {
+  if (!confirm('最新版を再読み込みしますか？\n（未同期の変更は先に保存されます）')) return;
+  saveToGAS().finally(() => {
+    location.replace(location.pathname + '?v=' + Date.now());
+  });
+}
+
+// ── 起動シーケンス（順序を保証してリセット競合を防ぐ）──────────
+(async function boot() {
+  await loadFromGAS();       // ★先にリモートを取得してから
+  checkAutoReset();          // ★リセット判定を行う（順序逆転による誤リセット防止）
+  flushLogQueue();           // 溜まっていたログを送信
+})();
 
 // 30秒ごとに自動同期（他デバイスの更新を反映）
 setInterval(() => { loadFromGAS(); }, 30000);
+// 1分ごとに10:00リセットを監視
+setInterval(checkAutoReset, 60000);
+// 1分ごとに未送信ログを再送
+setInterval(flushLogQueue, 60000);
+// 画面復帰時に即同期（スマホでよくある「古い表示のまま」を防ぐ）
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) { loadFromGAS(); checkAutoReset(); flushLogQueue(); }
+});
+window.addEventListener('online', () => { loadFromGAS(); flushLogQueue(); });
 </script>
 </body>
 </html>
