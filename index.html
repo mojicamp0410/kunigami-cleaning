@@ -18,6 +18,11 @@
   --pale:       #f4f7f5;
   --white:      #ffffff;
   --amber:      #e8b84b;
+  --gold:       #8a6115;
+  --gold-dk:    #5f4109;
+  --gold-lt:    #fdf6e8;
+  --red:        #c0392b;
+  --red-lt:     #fdf0ee;
   --done:       #1a6b3c;
   --done-lt:    #e6f4ec;
   --warn:       #8b4513;
@@ -310,11 +315,11 @@ body {
 .badge-quick { background: #fff0c8; color: #8a6200; border: 1px solid #e8c84b; }
 
 /* ── 掲示板 ── */
-.cat-board { border-color: var(--gold); color: var(--gold); }
-.cat-board.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+.cat-board { border-color: #8a6115; color: #7d570c; }
+.cat-board.active { background: #8a6115; border-color: #5f4109; color: #fff; }
 .cat-count {
   display: inline-block;
-  background: var(--red);
+  background: #c0392b;
   color: #fff;
   font-size: .6rem;
   padding: 0 .32rem;
@@ -368,19 +373,26 @@ body {
 }
 .board-hint { font-size: .68rem; color: var(--sage); }
 .board-post-btn {
-  background: var(--gold);
-  color: #fff;
-  border: none;
+  /* ★変数が読めない環境でも必ず色が出るよう実値を指定 */
+  background: #8a6115;
+  color: #ffffff;
+  border: 2px solid #5f4109;
   border-radius: 8px;
-  padding: .5rem 1.3rem;
-  font-size: .82rem;
-  font-weight: 700;
+  padding: .55rem 1.4rem;
+  font-size: .86rem;
+  font-weight: 900;
+  letter-spacing: .04em;
   font-family: 'Zen Kaku Gothic New';
   cursor: pointer;
   flex-shrink: 0;
-  transition: background .15s;
+  box-shadow: 0 2px 0 #6d4c10;
+  transition: background .15s, transform .1s, box-shadow .1s;
 }
-.board-post-btn:hover { background: #a87a1f; }
+.board-post-btn:hover { background: #6d4c10; }
+.board-post-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #6d4c10;
+}
 
 .board-list { display: flex; flex-direction: column; gap: .6rem; }
 .post {
@@ -510,9 +522,19 @@ body {
   font-family: 'Zen Kaku Gothic New';
   cursor: pointer;
 }
-.btn-edit-cancel { background: var(--mist); border: none; color: var(--sage); }
-.btn-edit-save   { background: var(--gold); border: none; color: #fff; }
-.btn-edit-save:hover { background: #a87a1f; }
+.btn-edit-cancel {
+  background: #ffffff;
+  border: 1.5px solid #d0ddd5;
+  color: #5a8a6e;
+}
+.btn-edit-cancel:hover { background: #e8f0eb; }
+.btn-edit-save {
+  background: #8a6115;
+  border: 2px solid #5f4109;
+  color: #ffffff;
+  font-weight: 900;
+}
+.btn-edit-save:hover { background: #6d4c10; }
 
 /* ステータス下のリセットボタン */
 .status-col {
@@ -1081,7 +1103,7 @@ body {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const APP_VERSION = "5.5.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
+const APP_VERSION = "5.5.1";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
 const SCHEMA_VER  = 5;        // stateの構造バージョン
 const STAFF_LIST = ["MOJI", "かずな", "たくま", "さり", "あやこ", "かずこ"];
 const STAFF_KEY  = "kfp_my_staff";
