@@ -422,6 +422,98 @@ body {
   word-break: break-word;
 }
 
+/* 対応状況 */
+.board-sec {
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  margin: .3rem 0 .1rem;
+  padding: 0 .15rem;
+}
+.sec-open { color: var(--red); }
+.sec-done { color: var(--sage); margin-top: 1rem; }
+
+.post-status {
+  font-size: .64rem;
+  font-weight: 900;
+  padding: .16rem .5rem;
+  border-radius: 1rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.st-open { background: var(--red-lt);  color: var(--red); }
+.st-done { background: var(--done-lt); color: var(--done); }
+
+.post.is-done {
+  border-left-color: var(--sage);
+  background: #fbfcfb;
+}
+.post.is-done .post-text { color: var(--sage); }
+.post-done-by {
+  font-size: .66rem;
+  color: var(--done);
+  background: var(--done-lt);
+  border-radius: 5px;
+  padding: .2rem .5rem;
+  margin-top: .35rem;
+  display: inline-block;
+}
+.post-edited {
+  display: block;
+  font-size: .64rem;
+  color: var(--sage);
+  margin-top: .3rem;
+  font-style: italic;
+}
+
+/* 投稿の操作ボタン */
+.post-act {
+  display: flex;
+  gap: .35rem;
+  margin-top: .55rem;
+  padding-top: .5rem;
+  border-top: 1px solid var(--mist);
+}
+.post-btn {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  color: var(--sage);
+  border-radius: 6px;
+  padding: .3rem .5rem;
+  font-size: .68rem;
+  font-weight: 700;
+  font-family: 'Zen Kaku Gothic New';
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.post-btn.done { flex: 1; border-color: var(--done); color: var(--done); }
+.post-btn.done:hover { background: var(--done); color: #fff; }
+.post-btn.undo { flex: 1; }
+.post-btn.undo:hover { background: var(--mist); }
+.post-btn.edit:hover { border-color: var(--gold); color: var(--gold); }
+.post-btn.del:hover  { border-color: var(--red);  color: var(--red); }
+
+/* 編集モード */
+.post.editing { border-left-color: var(--gold); background: #fffdf7; }
+.post-edit-act {
+  display: flex;
+  gap: .4rem;
+  margin-top: .5rem;
+  justify-content: flex-end;
+}
+.btn-edit-cancel, .btn-edit-save {
+  border-radius: 6px;
+  padding: .38rem .9rem;
+  font-size: .74rem;
+  font-weight: 700;
+  font-family: 'Zen Kaku Gothic New';
+  cursor: pointer;
+}
+.btn-edit-cancel { background: var(--mist); border: none; color: var(--sage); }
+.btn-edit-save   { background: var(--gold); border: none; color: #fff; }
+.btn-edit-save:hover { background: #a87a1f; }
+
 /* ステータス下のリセットボタン */
 .status-col {
   display: flex;
@@ -864,7 +956,11 @@ body {
   .board-hint      { text-align: center; }
   .board-post-btn  { width: 100%; padding: .6rem; font-size: .88rem; }
   .post-text       { font-size: .88rem; }
-  .post-del        { opacity: .8; font-size: 1rem; padding: .2rem .4rem; }
+  .post-btn        { font-size: .7rem; padding: .38rem .5rem; }
+  .post-act        { gap: .3rem; }
+  .post-status     { font-size: .62rem; padding: .16rem .45rem; }
+  .btn-edit-cancel,
+  .btn-edit-save   { padding: .45rem 1rem; font-size: .78rem; }
 
   /* ── グリッド ── */
   .grid { grid-template-columns: 1fr; gap: .65rem; padding: .5rem .75rem 2.5rem; }
@@ -985,7 +1081,7 @@ body {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const APP_VERSION = "5.4.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
+const APP_VERSION = "5.5.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
 const SCHEMA_VER  = 5;        // stateの構造バージョン
 const STAFF_LIST = ["MOJI", "かずな", "たくま", "さり", "あやこ", "かずこ"];
 const STAFF_KEY  = "kfp_my_staff";
@@ -1343,6 +1439,8 @@ function addPost() {
     text,
     by:   myStaff,
     at:   new Date().toISOString(),
+    done: false, doneBy: null, doneAt: null,
+    editedBy: null, editedAt: null,
   });
   el.value = '';
   boardDraft = '';
@@ -1365,6 +1463,74 @@ function deletePost(pid) {
   saveToGAS();
   showToast('🗑️ 投稿を削除しました');
   logActivity({ action: 'board_delete', facility: '掲示板', step: '', detail: p.text.slice(0, 200) });
+}
+
+// ── 投稿の編集 ────────────────────────────────────────────────
+let editingPostId = null;   // 編集中の投稿ID
+let editDraft     = '';     // 編集中の本文（再描画で消えないように保持）
+
+function startEditPost(pid) {
+  if (!requireStaff()) return;
+  const p = board.find(x => x.id === pid);
+  if (!p) return;
+  editingPostId = pid;
+  editDraft = p.text;
+  render();
+  const el = document.getElementById('editInput');
+  if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+}
+
+function cancelEditPost() {
+  editingPostId = null;
+  editDraft = '';
+  render();
+}
+
+function saveEditPost(pid) {
+  const p = board.find(x => x.id === pid);
+  if (!p) return;
+  const el = document.getElementById('editInput');
+  const text = (el?.value || '').trim();
+  if (!text) { showToast('⚠️ 内容を入力してください'); return; }
+
+  if (text !== p.text) {
+    p.text     = text;
+    p.editedBy = myStaff;
+    p.editedAt = new Date().toISOString();
+    boardDirty = true;
+    logActivity({ action: 'board_edit', facility: '掲示板', step: '', detail: text.slice(0, 200) });
+  }
+  editingPostId = null;
+  editDraft = '';
+  saveLocal();
+  render();
+  saveToGAS();
+  showToast('✏️ 投稿を修正しました');
+}
+
+// ── 対応状況の切り替え ────────────────────────────────────────
+function toggleDone(pid) {
+  if (!requireStaff()) return;
+  const p = board.find(x => x.id === pid);
+  if (!p) return;
+
+  p.done = !p.done;
+  if (p.done) {
+    p.doneBy = myStaff;
+    p.doneAt = new Date().toISOString();
+  } else {
+    p.doneBy = null;
+    p.doneAt = null;
+  }
+  boardDirty = true;
+  saveLocal();
+  render();
+  saveToGAS();
+  showToast(p.done ? `✅ 対応済みにしました` : `↩️ 対応未に戻しました`);
+  logActivity({
+    action: p.done ? 'board_done' : 'board_undone',
+    facility: '掲示板', step: '', detail: p.text.slice(0, 200),
+  });
 }
 
 // 変更のたびに「未送信」として印をつける
@@ -1696,6 +1862,8 @@ function render() {
   // 掲示板の書きかけを退避（再描画で消えないように）
   const bi = document.getElementById('boardInput');
   if (bi) boardDraft = bi.value;
+  const ei = document.getElementById('editInput');
+  if (ei) editDraft = ei.value;
 
   // 入力中の位置を覚えておく（再描画でカーソルが飛ぶのを防ぐ）
   const act = document.activeElement;
@@ -1725,7 +1893,11 @@ function render() {
 
 function renderBoardCount() {
   const el = document.getElementById('boardCount');
-  if (el) el.textContent = board.length ? ` ${board.length}` : '';
+  if (!el) return;
+  // 未対応の件数だけをバッジに出す（対応済みは数えない）
+  const open = board.filter(p => !p.done).length;
+  el.textContent = open ? ` ${open}` : '';
+  el.style.display = open ? '' : 'none';
 }
 
 function renderOverview() {
@@ -1756,26 +1928,68 @@ function esc(s) {
                         .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function fmtTs(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderPost(p) {
+  // 編集中はテキストエリアに差し替える
+  if (editingPostId === p.id) {
+    return `
+      <div class="post editing">
+        <div class="post-head">
+          <span class="post-by">${esc(p.by || '不明')}</span>
+          <span class="post-at">${fmtTs(p.at)}</span>
+        </div>
+        <textarea id="editInput" class="board-input">${esc(editDraft)}</textarea>
+        <div class="post-edit-act">
+          <button class="btn-edit-cancel" onclick="cancelEditPost()">キャンセル</button>
+          <button class="btn-edit-save" onclick="saveEditPost('${p.id}')">保存する</button>
+        </div>
+      </div>`;
+  }
+
+  const editedMark = p.editedAt
+    ? `<span class="post-edited">✏️ ${esc(p.editedBy || '')} が ${fmtTs(p.editedAt)} に修正</span>` : '';
+  const doneMark = p.done
+    ? `<div class="post-done-by">✅ ${esc(p.doneBy || '')} が ${fmtTs(p.doneAt)} に対応済みにしました</div>` : '';
+
+  return `
+    <div class="post ${p.done ? 'is-done' : ''}">
+      <div class="post-head">
+        <span class="post-status ${p.done ? 'st-done' : 'st-open'}">${p.done ? '✅ 対応済み' : '🔴 対応未'}</span>
+        <span class="post-by">${esc(p.by || '不明')}</span>
+        <span class="post-at">${fmtTs(p.at)}</span>
+      </div>
+      <div class="post-text">${esc(p.text)}</div>
+      ${editedMark}
+      ${doneMark}
+      <div class="post-act">
+        <button class="post-btn ${p.done ? 'undo' : 'done'}" onclick="toggleDone('${p.id}')">
+          ${p.done ? '↩️ 対応未に戻す' : '✅ 対応済みにする'}
+        </button>
+        <button class="post-btn edit" onclick="startEditPost('${p.id}')">✏️ 編集</button>
+        <button class="post-btn del"  onclick="deletePost('${p.id}')">🗑️ 削除</button>
+      </div>
+    </div>`;
+}
+
 function renderBoard() {
   const grid = document.getElementById('grid');
 
-  const postsHtml = board.length ? board.map(p => {
-    const d = new Date(p.at);
-    const ts = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    return `
-      <div class="post">
-        <div class="post-head">
-          <span class="post-by">${esc(p.by || '不明')}</span>
-          <span class="post-at">${ts}</span>
-          <button class="post-del" onclick="deletePost('${p.id}')" title="削除">🗑️</button>
-        </div>
-        <div class="post-text">${esc(p.text)}</div>
-      </div>`;
-  }).join('') : `
-      <div class="empty">
-        <div class="e-icon">📭</div>
-        <div>まだ投稿がありません</div>
-      </div>`;
+  // 対応未を上、対応済みを下に（それぞれ新しい順）
+  const open = board.filter(p => !p.done);
+  const done = board.filter(p =>  p.done);
+
+  const section = (title, arr, cls) => arr.length ? `
+      <div class="board-sec ${cls}">${title}（${arr.length}）</div>
+      ${arr.map(renderPost).join('')}` : '';
+
+  const listHtml = board.length
+    ? section('🔴 対応未', open, 'sec-open') + section('✅ 対応済み', done, 'sec-done')
+    : `<div class="empty"><div class="e-icon">📭</div><div>まだ投稿がありません</div></div>`;
 
   grid.innerHTML = `
     <div class="board-wrap">
@@ -1785,10 +1999,10 @@ function renderBoard() {
           placeholder="例）シャワー室のカビキラーが残り1本です。買い出しお願いします">${esc(boardDraft)}</textarea>
         <div class="board-actions">
           <span class="board-hint">${myStaff ? myStaff + ' として投稿' : '⚠️ 先に担当者を選んでください'}</span>
-          <button class="board-post-btn" onclick="addPost()">投稿する</button>
+          <button class="board-post-btn" onclick="addPost()">📌 投稿する</button>
         </div>
       </div>
-      <div class="board-list">${postsHtml}</div>
+      <div class="board-list">${listHtml}</div>
     </div>`;
 }
 
