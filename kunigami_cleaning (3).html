@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>国頭村森林公園 清掃管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:        #0f1a14;
+  --forest:     #1a3c28;
+  --green:      #2d6a45;
+  --sage:       #5a8a6e;
+  --mist:       #e8f0eb;
+  --pale:       #f4f7f5;
+  --white:      #ffffff;
+  --amber:      #e8b84b;
+  --done:       #1a6b3c;
+  --done-lt:    #e6f4ec;
+  --warn:       #8b4513;
+  --border:     #d0ddd5;
+  --laundry:    #1565c0;
+  --laundry-lt: #e3f2fd;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  background: var(--pale);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+/* ── TOP BAR ── */
+/* ヘッダーとカテゴリーをまとめて常時表示 */
+.sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--pale);
+  box-shadow: 0 2px 12px rgba(0,0,0,.18);
+}
+.topbar {
+  background: var(--forest);
+  padding: .9rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  flex-wrap: wrap;
+}
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  color: var(--white);
+}
+.topbar-logo .icon { font-size: 1.3rem; }
+.topbar-logo .title { font-size: .95rem; font-weight: 700; line-height: 1.2; }
+.topbar-logo .sub { font-size: .65rem; opacity: .7; font-weight: 300; }
+.topbar-right { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+
+/* スタッフ選択 */
+.staff-select-wrap {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 6px;
+  padding: .25rem .55rem;
+}
+.staff-label {
+  font-size: .7rem;
+  color: rgba(255,255,255,.7);
+  white-space: nowrap;
+}
+.staff-select {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: .84rem;
+  font-family: 'Zen Kaku Gothic New';
+  font-weight: 700;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 80px;
+  outline: none;
+}
+.staff-select option { color: var(--ink); background: white; }
+.staff-select.unset { color: var(--amber); }
+
+.clock {
+  font-family: 'DM Mono', monospace;
+  font-size: .82rem;
+  color: rgba(255,255,255,.75);
+  background: rgba(255,255,255,.1);
+  padding: .3rem .7rem;
+  border-radius: 4px;
+}
+.sync-status {
+  font-size: .72rem;
+  padding: .25rem .7rem;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.sync-loading { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); }
+.sync-ok      { background: rgba(76,175,80,.25);   color: #a5d6a7; }
+.sync-warn    { background: rgba(255,152,0,.2);    color: #ffcc80; }
+.btn-reset-all {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.25);
+  color: white;
+  padding: .3rem .8rem;
+  border-radius: 4px;
+  font-size: .72rem;
+  font-family: 'Zen Kaku Gothic New';
+  cursor: pointer;
+  transition: background .15s;
+}
+.btn-reset-all:hover { background: rgba(255,255,255,.22); }
+.btn-diag {
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.25);
+  color: white;
+  padding: .3rem .5rem;
+  border-radius: 4px;
+  font-size: .8rem;
+  cursor: pointer;
+  transition: background .15s;
+  line-height: 1;
+}
+.btn-diag:hover { background: rgba(255,255,255,.22); }
+.app-ver {
+  font-size: .6rem;
+  color: rgba(255,255,255,.45);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: .03em;
+}
+
+/* 保存失敗の警告バナー */
+.sync-error {
+  display: none;
+  background: #c0392b;
+  color: #fff;
+  padding: .7rem 1.2rem .8rem;
+  text-align: center;
+}
+.sync-error.show { display: block; }
+.sync-error-title { font-size: .82rem; font-weight: 900; }
+.sync-error-msg {
+  font-size: .68rem;
+  opacity: .85;
+  margin-top: .2rem;
+  font-family: 'DM Mono', monospace;
+  word-break: break-all;
+}
+.sync-error-act { margin-top: .5rem; display: flex; gap: .5rem; justify-content: center; }
+.sync-error-act button {
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.5);
+  color: #fff;
+  padding: .3rem .9rem;
+  border-radius: 5px;
+  font-size: .72rem;
+  font-weight: 700;
+  font-family: 'Zen Kaku Gothic New';
+  cursor: pointer;
+}
+.sync-error-act button:hover { background: rgba(255,255,255,.3); }
+
+/* スタッフ未選択アラート */
+.staff-alert {
+  background: #fff8e1;
+  border-bottom: 2px solid var(--amber);
+  padding: .55rem 1.2rem;
+  font-size: .82rem;
+  font-weight: 700;
+  color: #856404;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.staff-alert.hidden { display: none; }
+
+/* ── OVERVIEW STRIP ── */
+.overview {
+  background: var(--forest);
+  padding: .5rem 1.2rem 1rem;
+  display: flex;
+  gap: .6rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.overview::-webkit-scrollbar { display: none; }
+.ov-chip {
+  flex-shrink: 0;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 6px;
+  padding: .35rem .8rem;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+  min-width: 72px;
+}
+.ov-chip:hover { background: rgba(255,255,255,.2); }
+.ov-chip .ov-name { font-size: .68rem; color: rgba(255,255,255,.8); font-weight: 400; }
+.ov-chip .ov-status { font-size: .75rem; font-weight: 700; margin-top: .1rem; }
+.ov-chip.wip   { border-color: var(--amber); background: rgba(200,149,42,.15); }
+.ov-chip.done  { border-color: #4caf50; background: rgba(76,175,80,.15); }
+
+/* ── CATEGORY FILTER ── */
+.cat-bar {
+  padding: .55rem 1rem;
+  display: flex;
+  gap: .5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: var(--pale);
+  border-bottom: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
+}
+.cat-bar::-webkit-scrollbar { display: none; }
+.cat-btn {
+  flex-shrink: 0;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 2rem;
+  padding: .35rem .9rem;
+  font-size: .75rem;
+  font-family: 'Zen Kaku Gothic New';
+  font-weight: 700;
+  color: var(--sage);
+  cursor: pointer;
+  transition: all .15s;
+}
+.cat-btn.active {
+  background: var(--forest);
+  border-color: var(--forest);
+  color: var(--white);
+}
+
+/* ── GRID ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+  padding: .8rem 1rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── FACILITY CARD ── */
+.card {
+  background: var(--white);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(15,26,20,.08);
+  border: 2px solid var(--border);
+  transition: border-color .2s, box-shadow .2s;
+}
+.card.status-done {
+  border-color: #4caf50;
+  box-shadow: 0 2px 16px rgba(76,175,80,.15);
+}
+.card.status-wip {
+  border-color: var(--amber);
+  box-shadow: 0 2px 16px rgba(232,184,75,.15);
+}
+
+.card-head {
+  padding: .9rem 1rem .7rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .5rem;
+  border-bottom: 1px solid var(--mist);
+}
+.card-head-left { display: flex; align-items: center; gap: .6rem; flex: 1; min-width: 0; }
+.facility-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.card-info { min-width: 0; }
+.card-type { font-size: .62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--sage); margin-bottom: .1rem; }
+.card-name { font-size: 1rem; font-weight: 900; color: var(--ink); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-name-jp { font-size: .72rem; color: var(--sage); font-weight: 400; }
+
+.status-badge {
+  flex-shrink: 0;
+  padding: .28rem .75rem;
+  border-radius: 2rem;
+  font-size: .7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.badge-dirty { background: #f0f0f0; color: #888; }
+.badge-wip   { background: #fff3cd; color: #856404; }
+.badge-done  { background: var(--done-lt); color: var(--done); }
+.badge-quick { background: #fff0c8; color: #8a6200; border: 1px solid #e8c84b; }
+
+/* ステータス下のリセットボタン */
+.status-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .35rem;
+  flex-shrink: 0;
+}
+.btn-status-reset {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  color: var(--sage);
+  padding: .22rem .6rem;
+  border-radius: 2rem;
+  font-size: .66rem;
+  font-weight: 700;
+  font-family: 'Zen Kaku Gothic New';
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.btn-status-reset:hover {
+  background: var(--red-lt);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ── チェックイン日時 ── */
+.checkin-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem 1rem;
+  border-bottom: 1px solid var(--mist);
+  background: var(--pale);
+}
+.checkin-label {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--sage);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.checkin-input {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: .28rem .55rem;
+  font-size: .78rem;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  color: var(--ink);
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color .15s;
+  min-width: 0;
+}
+.checkin-input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(45,106,69,.1);
+}
+.checkin-input.has-value {
+  border-color: var(--green);
+  color: var(--forest);
+  font-weight: 700;
+}
+.checkin-clear {
+  background: none;
+  border: none;
+  color: var(--sage);
+  cursor: pointer;
+  font-size: .9rem;
+  padding: .1rem .3rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: .6;
+  transition: opacity .15s;
+}
+.checkin-clear:hover { opacity: 1; }
+
+/* ── 洗濯物バナー ── */
+.laundry-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .45rem 1rem;
+  background: var(--pale);
+  border-bottom: 1px solid var(--mist);
+}
+.laundry-info {
+  font-size: .74rem;
+  font-weight: 700;
+  color: var(--sage);
+}
+.laundry-btn {
+  padding: .25rem .8rem;
+  border-radius: 2rem;
+  font-size: .72rem;
+  font-weight: 700;
+  border: 1.5px solid var(--border);
+  background: var(--white);
+  color: var(--sage);
+  cursor: pointer;
+  font-family: 'Zen Kaku Gothic New';
+  transition: all .15s;
+}
+.laundry-btn.active {
+  background: var(--laundry-lt);
+  border-color: var(--laundry);
+  color: var(--laundry);
+}
+.laundry-banner.has-laundry {
+  background: var(--laundry-lt);
+  border-bottom-color: #90caf9;
+}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap { padding: .5rem 1rem .3rem; }
+.progress-bar-bg {
+  background: var(--mist);
+  border-radius: 2px;
+  height: 4px;
+  overflow: hidden;
+  margin-bottom: .3rem;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--green);
+  transition: width .4s cubic-bezier(.4,0,.2,1);
+}
+.progress-bar-fill.complete { background: #4caf50; }
+.progress-text {
+  font-size: .68rem;
+  color: var(--sage);
+  font-family: 'DM Mono', monospace;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ── STEPS ── */
+.steps { padding: .4rem .8rem .6rem; }
+.step {
+  padding: .5rem .5rem .4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .12s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.step:hover { background: var(--pale); }
+.step:active { background: var(--mist); }
+
+.step-main {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.step-check {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s cubic-bezier(.4,0,.2,1);
+  background: var(--white);
+}
+.step.checked .step-check {
+  background: var(--green);
+  border-color: var(--green);
+}
+.step.checked .step-check::after {
+  content: '';
+  width: 5px; height: 9px;
+  border: 2px solid white;
+  border-top: none; border-left: none;
+  transform: rotate(42deg) translate(-1px, -1px);
+}
+.step-icon { font-size: .9rem; flex-shrink: 0; opacity: .6; }
+.step-label {
+  font-size: .84rem;
+  color: var(--ink);
+  line-height: 1.35;
+  flex: 1;
+}
+.step.checked .step-label {
+  color: var(--sage);
+  text-decoration: line-through;
+  text-decoration-color: var(--sage);
+}
+.step-opt {
+  font-size: .6rem;
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: .1rem .4rem;
+  border-radius: 3px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* チェック者表示 */
+.step-checker {
+  margin-top: .15rem;
+  padding-left: calc(22px + .6rem + 1.5rem + .6rem);
+  font-size: .62rem;
+  color: var(--sage);
+  font-weight: 700;
+}
+.step-checker span {
+  background: var(--mist);
+  padding: .05rem .4rem;
+  border-radius: 3px;
+}
+
+/* セクションヘッダー（チェックなし・区切り線）*/
+.step-section {
+  padding: .7rem .5rem .3rem;
+  font-size: .72rem;
+  font-weight: 900;
+  color: var(--forest);
+  letter-spacing: .06em;
+  border-bottom: 1.5px solid var(--mist);
+  margin-top: .4rem;
+  cursor: default;
+}
+.step-section:first-child { margin-top: 0; }
+
+/* ステップ詳細メモ */
+.step-note {
+  font-size: .68rem;
+  color: var(--sage);
+  line-height: 1.45;
+  margin-top: .2rem;
+  padding-left: calc(22px + .6rem + 1.5rem + .6rem);
+}
+.step.checked .step-note { opacity: .55; }
+
+/* ── ACTION BUTTONS ── */
+.card-footer {
+  padding: .6rem 1rem .9rem;
+  border-top: 1px solid var(--mist);
+  display: flex;
+  gap: .5rem;
+}
+.btn-action {
+  flex: 1;
+  padding: .55rem;
+  border-radius: 8px;
+  font-family: 'Zen Kaku Gothic New';
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .3rem;
+}
+.btn-complete { background: var(--green); color: white; }
+.btn-complete:hover { background: var(--forest); }
+.btn-reset {
+  background: var(--mist);
+  color: var(--sage);
+  flex: 0 0 auto;
+  padding: .55rem .9rem;
+}
+.btn-reset:hover { background: var(--border); }
+
+/* ── READY STAMP ── */
+.ready-stamp {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .2rem;
+  background: var(--done-lt);
+  color: var(--done);
+  font-weight: 900;
+  font-size: .9rem;
+  padding: .65rem;
+  border-radius: 8px;
+  width: 100%;
+  text-align: center;
+  letter-spacing: .03em;
+}
+.ready-stamp .stamp-icon { font-size: 1.1rem; }
+.ready-stamp .stamp-by {
+  font-size: .66rem;
+  font-weight: 400;
+  color: var(--sage);
+}
+.card.status-done .ready-stamp { display: flex; }
+.card.status-done .btn-complete { display: none; }
+
+/* ── TIMESTAMP ── */
+.timestamp {
+  font-family: 'DM Mono', monospace;
+  font-size: .62rem;
+  color: var(--sage);
+  text-align: right;
+  padding: 0 1rem .6rem;
+  display: none;
+}
+.card.status-done .timestamp { display: block; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  opacity: 0;
+  background: var(--ink);
+  color: white;
+  padding: .6rem 1.3rem;
+  border-radius: 2rem;
+  font-size: .82rem;
+  font-weight: 700;
+  z-index: 999;
+  transition: all .25s cubic-bezier(.34,1.56,.64,1);
+  white-space: nowrap;
+  max-width: 90vw;
+  text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ── EMPTY STATE ── */
+.empty { text-align: center; padding: 3rem 1rem; color: var(--sage); }
+.empty .e-icon { font-size: 3rem; opacity: .4; margin-bottom: .8rem; }
+
+/* ── MEMO ── */
+.memo-wrap {
+  padding: .4rem .8rem .8rem;
+  border-top: 1px solid var(--mist);
+}
+.memo-label {
+  font-size: .68rem;
+  font-weight: 700;
+  color: var(--sage);
+  letter-spacing: .08em;
+  margin-bottom: .35rem;
+  display: flex;
+  align-items: center;
+  gap: .3rem;
+}
+.memo-by {
+  font-size: .68rem;
+  color: var(--green);
+  background: var(--done-lt);
+  border-radius: 5px;
+  padding: .2rem .5rem;
+  margin-bottom: .3rem;
+  display: inline-block;
+  font-weight: 600;
+}
+.memo-textarea {
+  width: 100%;
+  min-height: 64px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  font-size: .82rem;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  color: var(--ink);
+  background: var(--pale);
+  resize: vertical;
+  transition: border-color .15s, box-shadow .15s;
+  line-height: 1.55;
+}
+.memo-textarea:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(45,106,69,.1);
+  background: var(--white);
+}
+.memo-textarea::placeholder { color: var(--sage); opacity: .6; }
+.memo-saved {
+  font-size: .65rem;
+  color: var(--sage);
+  text-align: right;
+  margin-top: .25rem;
+  min-height: .9rem;
+  transition: opacity .3s;
+}
+
+@media (max-width: 600px) {
+  /* ── topbar: ロゴ行 + スタッフ行 の2段に ── */
+  .topbar {
+    padding: .5rem .8rem .45rem;
+    gap: .35rem;
+  }
+  .topbar-logo .title { font-size: .82rem; }
+  .topbar-logo .sub   { display: none; }
+  .topbar-logo .icon  { font-size: 1.1rem; }
+  .topbar-right {
+    width: 100%;
+    justify-content: space-between;
+    gap: .35rem;
+  }
+  .staff-select-wrap { flex: 1; }
+  .staff-select      { font-size: .9rem; min-width: 0; width: 100%; }
+  .clock             { font-size: .72rem; padding: .22rem .45rem; }
+  .sync-status       { font-size: .66rem; padding: .18rem .45rem; }
+  .btn-reset-all     { font-size: .68rem; padding: .26rem .55rem; }
+  .btn-diag          { font-size: .72rem; padding: .26rem .4rem; }
+  .app-ver           { font-size: .55rem; }
+
+  /* 固定エリアを低く保つため、時計と版数はスマホでは省略 */
+  .clock, .app-ver { display: none; }
+
+  /* 診断系ボタンは1行にまとめてコンパクトに */
+  .topbar-tools {
+    display: flex;
+    gap: .3rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* ── スタッフアラート ── */
+  .staff-alert { font-size: .78rem; padding: .5rem .9rem; }
+
+  /* ── overview strip ── */
+  .overview { padding: .4rem .75rem .8rem; gap: .45rem; }
+  .ov-chip  { min-width: 64px; padding: .3rem .6rem; }
+  .ov-chip .ov-name   { font-size: .65rem; }
+  .ov-chip .ov-status { font-size: .72rem; }
+
+  /* ── カテゴリフィルター ── */
+  .cat-bar   { padding: .6rem .75rem .35rem; gap: .4rem; }
+  .cat-btn   { font-size: .72rem; padding: .32rem .75rem; }
+
+  /* ── グリッド ── */
+  .grid { grid-template-columns: 1fr; gap: .65rem; padding: .5rem .75rem 2.5rem; }
+
+  /* ── カードヘッダー ── */
+  .card-head   { padding: .8rem .9rem .65rem; }
+  .facility-icon { width: 36px; height: 36px; font-size: 1.15rem; }
+  .card-name   { font-size: .95rem; }
+  .card-name-jp{ font-size: .7rem; }
+  .status-badge{ font-size: .68rem; padding: .25rem .6rem; }
+
+  /* ── チェックイン行 ── */
+  .checkin-row   { padding: .4rem .9rem; }
+  .checkin-label { font-size: .7rem; }
+  .checkin-input { font-size: .82rem; padding: .35rem .5rem; }
+
+  /* ── 洗濯物バナー ── */
+  .laundry-banner{ padding: .4rem .9rem; }
+  .laundry-info  { font-size: .72rem; }
+  .laundry-btn   { font-size: .74rem; padding: .3rem .75rem; }
+
+  /* ── プログレスバー ── */
+  .progress-wrap { padding: .45rem .9rem .25rem; }
+
+  /* ── ステップ（タッチしやすく）── */
+  .steps { padding: .35rem .6rem .5rem; }
+  .step  { padding: .65rem .4rem .5rem; }   /* 縦方向を広くしてタップしやすく */
+  .step-check { width: 26px; height: 26px; } /* チェック丸を少し大きく */
+  .step.checked .step-check::after {
+    width: 6px; height: 11px;
+  }
+  .step-icon  { font-size: .95rem; }
+  .step-label { font-size: .88rem; }
+  .step-checker { font-size: .65rem; padding-left: calc(26px + .6rem + 1.5rem + .6rem); }
+  .step-note    { font-size: .7rem;  padding-left: calc(26px + .6rem + 1.5rem + .6rem); }
+
+  /* ── フッターボタン ── */
+  .card-footer { padding: .55rem .9rem .8rem; }
+  .btn-action  { padding: .65rem; font-size: .82rem; }
+  .btn-reset   { padding: .65rem 1rem; font-size: .9rem; }
+
+  /* ── 完了スタンプ ── */
+  .ready-stamp      { font-size: .88rem; padding: .7rem; }
+  .ready-stamp .stamp-by { font-size: .68rem; }
+
+  /* ── メモ ── */
+  .memo-wrap     { padding: .4rem .9rem .8rem; }
+  .memo-textarea { font-size: .86rem; min-height: 70px; }
+}
+</style>
+</head>
+<body>
+
+<!-- 常時表示エリア（ヘッダー＋カテゴリー） -->
+<div class="sticky-head">
+  <header class="topbar">
+    <div class="topbar-logo">
+      <span class="icon">🏕️</span>
+      <div>
+        <div class="title">国頭村森林公園</div>
+        <div class="sub">清掃・引き継ぎ管理システム</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+    <div class="staff-select-wrap">
+      <span class="staff-label">担当者：</span>
+      <select class="staff-select unset" id="staffSelect" onchange="onStaffChange(this.value)">
+        <option value="">-- 選択 --</option>
+      </select>
+    </div>
+    <div class="sync-status sync-loading" id="syncStatus">🔄 読み込み中...</div>
+    <div class="clock" id="clock">--:--</div>
+    <div class="topbar-tools">
+    <button class="btn-reset-all" onclick="resetAll()">全リセット</button>
+    <button class="btn-diag" onclick="forceRefresh()" title="最新版に更新">⟳</button>
+    <button class="btn-diag" onclick="showDiagnostics()" title="診断情報">🩺</button>
+    <button class="btn-diag" onclick="runConnectionTest()" title="接続テスト">📡</button>
+      </div>
+      <span class="app-ver" id="appVer"></span>
+    </div>
+  </header>
+
+  <!-- CATEGORY FILTER（ヘッダーと一体で常時表示） -->
+  <div class="cat-bar">
+    <button class="cat-btn active" onclick="filterCat('all',this)">すべて</button>
+    <button class="cat-btn" onclick="filterCat('bungalow',this)">🏠 バンガロー</button>
+    <button class="cat-btn" onclick="filterCat('cottage',this)">⭐ 星のコテージ</button>
+    <button class="cat-btn" onclick="filterCat('treehouse',this)">🌳 樹上ハウス</button>
+    <button class="cat-btn" onclick="filterCat('cabin',this)">🦅 森のキャビン</button>
+  </div>
+</div>
+
+<!-- スタッフ未選択アラート -->
+<div class="staff-alert" id="staffAlert">
+  ⚠️ 担当者が選択されていません。上のメニューから名前を選んでください。
+</div>
+
+<!-- 保存失敗の警告 -->
+<div class="sync-error" id="syncError">
+  <div class="sync-error-title">🚨 保存できていません — 他の人に反映されません</div>
+  <div class="sync-error-msg" id="syncErrorMsg"></div>
+  <div class="sync-error-act">
+    <button onclick="saveToGAS()">再送信</button>
+    <button onclick="runConnectionTest()">接続テスト</button>
+  </div>
+</div>
+
+<!-- OVERVIEW STRIP -->
+<div class="overview" id="overviewStrip"></div>
+
+<!-- GRID -->
+<main class="grid" id="grid"></main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────
+const APP_VERSION = "5.3.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
+const SCHEMA_VER  = 5;        // stateの構造バージョン
+const STAFF_LIST = ["MOJI", "かずな", "たくま", "さり", "あやこ", "かずこ"];
+const STAFF_KEY  = "kfp_my_staff";
+const LOCAL_KEY  = "kfp_cleaning_v4_local";
+const VER_KEY    = "kfp_app_version";
+const DEVICE_KEY = "kfp_device_id";
+const GAS_URL    = "https://script.google.com/macros/s/AKfycbymFFWa8Md4hE1yf9Gna8mMd4QVgk4fqn8TzsIYMHIg8sF8qmjBkC3ehVAf84ifsl0Y/exec";
+
+let myStaff  = localStorage.getItem(STAFF_KEY) || "";
+let state    = {};
+let isSyncing      = false;
+let syncingPromise = null;  // 進行中の保存（呼び出し元が待てるように）
+let savePending    = false; // 保存中に来た変更を取りこぼさないフラグ
+let lastSyncOk     = null;  // 最終同期成功時刻
+let lastSyncErr    = null;  // 最終エラー内容
+let lastSaveMethod = '—';   // 実際に成功した保存経路（POST / GET）
+const dirtyFids    = new Set(); // この端末で変更したがまだ送信できていない棟
+
+// デバイス識別子（どの端末からの記録か判別用）
+let deviceId = localStorage.getItem(DEVICE_KEY);
+if (!deviceId) {
+  deviceId = 'd' + Math.random().toString(36).slice(2, 8);
+  localStorage.setItem(DEVICE_KEY, deviceId);
+}
+
+// ── JST基準の日時ヘルパー（端末のタイムゾーン差を吸収）──────────
+function jstNow() {
+  return new Date(Date.now() + (new Date().getTimezoneOffset() * 60000) + (9 * 3600000));
+}
+function jstDateStr(d) {
+  const t = d || jstNow();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+}
+
+// ── バージョン差分チェック（古いキャッシュの検知）──────────────
+function checkVersion() {
+  const stored = localStorage.getItem(VER_KEY);
+  if (stored && stored !== APP_VERSION) {
+    // アプリが更新された → 古いstateを新スキーマへ移行
+    console.log(`[KFP] バージョン更新: ${stored} → ${APP_VERSION}`);
+  }
+  localStorage.setItem(VER_KEY, APP_VERSION);
+}
+checkVersion();
+
+// ── スタッフ選択 ───────────────────────────────────────────────
+function initStaffSelect() {
+  const sel = document.getElementById('staffSelect');
+  STAFF_LIST.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  sel.value = myStaff;
+  updateStaffUI();
+}
+
+function onStaffChange(val) {
+  myStaff = val;
+  localStorage.setItem(STAFF_KEY, val);
+  updateStaffUI();
+}
+
+function updateStaffUI() {
+  const sel   = document.getElementById('staffSelect');
+  const alert = document.getElementById('staffAlert');
+  if (myStaff) {
+    sel.classList.remove('unset');
+    alert.classList.add('hidden');
+  } else {
+    sel.classList.add('unset');
+    alert.classList.remove('hidden');
+  }
+}
+
+// ── FACILITY DEFINITIONS ───────────────────────────────────────
+const BUNGALOW_STEPS = [
+  // ① 入室チェック
+  { id:"bh1", section:true, label:"🔑 入室チェック" },
+  { id:"b1", icon:"🔍", label:"忘れ物・破損・ゴミチェック" },
+  { id:"b2", icon:"🛏️", label:"寝具の撤収（ひっぺがし）" },
+
+  // ② リビング 2Fロフト（上から下へ）
+  { id:"bh2", section:true, label:"🏠 リビング 2Fロフト" },
+  { id:"b3", icon:"🪶", label:"天井・壁・木部分の清掃",
+    note:"天井・壁の埃・蜘蛛の巣確認 → 木と木の部分埃落とし（高所はクイックル） → 木柵の拭き掃除" },
+  { id:"b4", icon:"🧹", label:"ロフト床の清掃" },
+  { id:"b5", icon:"🪜", label:"ハシゴ拭きあげ・窓上の埃",
+    note:"降りながらハシゴを拭きあげ → ハシゴ前の窓ガラス上の埃確認" },
+
+  // ③ リビング 1F（上から下へ）
+  { id:"bh3", section:true, label:"🛋️ リビング 1F" },
+  { id:"b6", icon:"🪶", label:"天井・壁・カーテンレール・ランプ",
+    note:"上から下へ埃落とし → カーテンレール上の埃確認 → ランプ類拭きあげ（クイックル）" },
+  { id:"b7", icon:"🪑", label:"テーブル・椅子の拭きあげ" },
+  { id:"b8", icon:"🗄️", label:"布団クローゼット上クイックル" },
+  { id:"b9", icon:"🛏️", label:"ベッドメイク" },
+  { id:"b10", icon:"🧹", label:"1F床の清掃" },
+
+  // ④ ベランダ・玄関・外回り
+  { id:"bh4", section:true, label:"🌿 ベランダ・玄関・外回り" },
+  { id:"b11", icon:"🪟", label:"窓・ベランダ",
+    note:"窓拭き → ベランダの蜘蛛の巣・枯葉掃除" },
+  { id:"b12", icon:"🚪", label:"玄関・ドア周り",
+    note:"玄関ドア上からクイックル → ブレーカー上の埃 → 靴箱の拭きあげ" },
+  { id:"b13", icon:"🍃", label:"外回り",
+    note:"地面の掃き掃除 → 外ドアの拭きあげ → 外回りの枯葉掃除" },
+
+  // ⑤ 水回り（シャワー・トイレ）
+  { id:"bh5", section:true, label:"🚿 水回り（シャワー・トイレ）" },
+  { id:"b14", icon:"💨", label:"換気扇・天井・壁",
+    note:"換気扇動作確認 → 天井・壁のカビ・蜘蛛の巣確認（カビキラー対応）" },
+  { id:"b15", icon:"🚿", label:"シャワーフック・ヘッド",
+    note:"カビ・汚れ確認（汚れ時はカビキラー対応）" },
+  { id:"b16", icon:"🕳️", label:"排水溝",
+    note:"蓋・中のカップをブラシ洗い → 匂い・ぬめりがある場合はトイレハイターを流し放置" },
+  { id:"b17", icon:"🚽", label:"トイレ清掃",
+    note:"頑固な汚れはトイレハイターを流し込み放置 → 通常トイレ清掃" },
+  { id:"b18", icon:"🚪", label:"ドア内側カビ確認",
+    note:"カビがひどい場合はカビキラー塗りあげ" },
+  { id:"b19", icon:"✨", label:"シャワー壁・床・トイレ床の仕上げ",
+    note:"全体を洗い → お湯で全部流す → 拭きあげ → カビキラーした箇所は水多めの濡れ布巾で拭く" },
+  { id:"b20", icon:"🪞", label:"洗面台・金属・鏡",
+    note:"ベイシン洗い → 金属部分磨き → 鏡拭きあげ" },
+
+  // ⑥ 仕上げ
+  { id:"bh6", section:true, label:"✅ 仕上げ" },
+  { id:"b21", icon:"🐜", label:"アリ対策" },
+  { id:"b22", icon:"✨", label:"仕上げ確認" },
+
+  // 月1回メンテナンス
+  { id:"bh7", section:true, label:"📅 月1回メンテナンス" },
+  { id:"bm1", icon:"❄️", label:"エアコンフィルターの清掃", opt:"月1回" },
+];
+
+const TREEHOUSE_STEPS = [
+  { id:"s1", icon:"🔍", label:"忘れ物チェック" },
+  { id:"s2", icon:"🧹", label:"室内の清掃" },
+  { id:"s3", icon:"💧", label:"クーラーの水捨て" },
+  { id:"s4", icon:"🛏️", label:"寝袋の回収または準備", opt:"寝袋オプション時" },
+  { id:"s5", icon:"🐜", label:"アリ対策" },
+  // 月1回メンテナンス
+  { id:"h1", section:true, label:"📅 月1回メンテナンス" },
+  { id:"m1", icon:"❄️", label:"エアコンフィルターの清掃", opt:"月1回" },
+];
+
+// セクション区切り付きコテージ詳細ステップ
+const COTTAGE_STEPS = [
+  // ① 入室チェック
+  { id:"h1", section:true, label:"🔑 入室チェック" },
+  { id:"s1", icon:"🔍", label:"忘れ物・破損・回収物の確認" },
+
+  // ② 寝具
+  { id:"h2", section:true, label:"🛏️ 寝具" },
+  { id:"s2", icon:"🛏️", label:"寝具の撤収（ひっぺがし）" },
+
+  // ③ リビングルーム
+  { id:"h3", section:true, label:"🛋️ リビングルーム" },
+  { id:"s3", icon:"🪶", label:"天井・カーテン",
+    note:"クイックルで届く範囲の埃落とし → カーテン汚れ確認" },
+  { id:"s4", icon:"❄️", label:"エアコン上部の埃取り" },
+  { id:"s5", icon:"🪑", label:"テーブル・椅子の拭きあげ" },
+  { id:"s6", icon:"🧹", label:"床の掃き・拭き掃除" },
+
+  // ④ キッチン（約30分）
+  { id:"h4", section:true, label:"🍳 キッチン（約30分）" },
+  { id:"s7",  icon:"🔆", label:"棚・照明・窓・木部分",
+    note:"台所上棚クイックル → 照明点灯確認 → 窓拭き → 木のフチ拭きあげ" },
+  { id:"s8",  icon:"🍳", label:"コンロ掃除" },
+  { id:"s9",  icon:"🍽️", label:"食器ラック・コップ類",
+    note:"食器ラック洗い → コップ類セット汚れ確認" },
+  { id:"s10", icon:"🚰", label:"引き出し・シンク",
+    note:"下引き出し埃チェック → シンク洗い → 拭きあげ" },
+  { id:"s11", icon:"❄️", label:"冷蔵庫",
+    note:"上クイックル → 中拭きあげ → 匂い確認" },
+  { id:"s12", icon:"📦", label:"ケトル・レンジ",
+    note:"ケトル底汚れ確認 → レンジ上クイックル・中確認" },
+  { id:"s13", icon:"🗑️", label:"ゴミ箱",
+    note:"ゴミ袋セット確認 → ゴミ箱下クイックル" },
+
+  // ⑤ 洗面所（5〜10分）
+  { id:"h5", section:true, label:"🪥 洗面所（5〜10分）" },
+  { id:"s14", icon:"🧹", label:"棚・壁の埃落とし",
+    note:"上からクイックル → 壁・木部分拭きあげ" },
+  { id:"s15", icon:"🪞", label:"鏡・洗面台・金属部分",
+    note:"鏡拭き → 洗面台洗い・拭きあげ → 蛇口等金属磨き" },
+
+  // ⑥ 洗濯機周り（約10分）
+  { id:"h6", section:true, label:"🫧 洗濯機周り（約10分）" },
+  { id:"s16", icon:"🪝", label:"天井ラック・壁",
+    note:"天井ラッククイックル → コンセント付近・壁・木部分拭きあげ" },
+  { id:"s17", icon:"🌀", label:"洗濯機・洗濯機下周り・排水溝トラップチェック",
+    note:"外側拭きあげ → フィルター2個確認・洗浄（定期：槽洗浄） → 洗濯機下周り清掃 → 排水溝トラップチェック → 洗濯バン拭きあげ" },
+
+  // ⑦ シャワー室（約30分）
+  { id:"h7", section:true, label:"🚿 シャワー室（約30分）" },
+  { id:"s18", icon:"🧱", label:"天井・壁・ドア",
+    note:"天井から壁クイックル → カビ汚れチェック（カビキラー散布・ブラシ） → ドアカビ・水垢チェック" },
+  { id:"s19", icon:"🪟", label:"窓サッシ・床",
+    note:"サッシ汚れチェック → 床目地のカビ・赤カビ確認（カビキラー対応）" },
+  { id:"s20", icon:"🧴", label:"石鹸受け・排水溝",
+    note:"ぬめり・水垢チェック → 受け皿ゴミ処分 → 排水パイプブラシ洗い → ハイター放置" },
+  { id:"s20b", icon:"🕳️", label:"排水溝トラップチェック" },
+  { id:"s21", icon:"✨", label:"仕上げ（お湯で流す・磨く）",
+    note:"天井からお湯で流す → 金属部分磨き → 髪の毛・汚れ最終チェック" },
+
+  // ⑧ トイレ（約15分）
+  { id:"h8", section:true, label:"🚽 トイレ（約15分）" },
+  { id:"s22", icon:"🌬️", label:"換気扇・壁・木部分",
+    note:"換気扇動作確認 → 壁・木部分拭きあげ" },
+  { id:"s23", icon:"🚽", label:"便器・手すり・手洗い",
+    note:"便器掃除 → 手すり・手洗い掃除 → 水を流す" },
+  { id:"s24", icon:"🕳️", label:"排水溝・床",
+    note:"蓋・内部品ブラシ洗い（匂い時はハイター放置→流す・カップに水セット） → 床拭きあげ" },
+  { id:"s24b", icon:"🔍", label:"排水溝トラップチェック" },
+
+  // ⑨ 仕上げ
+  { id:"h9", section:true, label:"✅ 仕上げ" },
+  { id:"s25", icon:"🛏️", label:"寝具のセッティング" },
+  { id:"s26", icon:"🪟", label:"窓の清掃" },
+  { id:"s27", icon:"🚪", label:"玄関の清掃（最後）" },
+  { id:"s28", icon:"🐜", label:"アリ対策" },
+  { id:"s29", icon:"🕳️", label:"排水溝トラップチェック（全箇所）" },
+
+  // ⑩ 月1回メンテナンス
+  { id:"h10", section:true, label:"📅 月1回メンテナンス" },
+  { id:"m1", icon:"💨", label:"換気扇の清掃", opt:"月1回",
+    note:"キッチン・トイレ・シャワー室" },
+  { id:"m2", icon:"❄️", label:"エアコンフィルターの清掃", opt:"月1回" },
+];
+
+const FACILITIES = [
+  {
+    id: "matsu", cat: "bungalow",
+    type: "バンガロー", nameEn: "MATSU", nameJp: "松棟",
+    icon: "🏠", iconBg: "#e8f0eb",
+    steps: BUNGALOW_STEPS,
+  },
+  {
+    id: "itajii", cat: "bungalow",
+    type: "バンガロー", nameEn: "ITAJII", nameJp: "イタジイ棟",
+    icon: "🏠", iconBg: "#e8f0eb",
+    steps: BUNGALOW_STEPS,
+  },
+  {
+    id: "iju", cat: "bungalow",
+    type: "バンガロー", nameEn: "IJU", nameJp: "イジュ棟",
+    icon: "🏠", iconBg: "#e8f0eb",
+    steps: BUNGALOW_STEPS,
+  },
+  {
+    id: "muribushi", cat: "cottage",
+    type: "星のコテージ", nameEn: "MURIBUSHI", nameJp: "むりぶし",
+    icon: "⭐", iconBg: "#fffde7",
+    steps: COTTAGE_STEPS,
+  },
+  {
+    id: "ninufa", cat: "cottage",
+    type: "星のコテージ", nameEn: "NINUFABUSHI", nameJp: "にぬふぁぶし",
+    icon: "⭐", iconBg: "#fffde7",
+    steps: COTTAGE_STEPS,
+  },
+  {
+    id: "tree3", cat: "treehouse",
+    type: "樹上ハウス", nameEn: "TREE HOUSE No.3", nameJp: "No.3",
+    icon: "🌳", iconBg: "#e8f5e9",
+    steps: TREEHOUSE_STEPS,
+  },
+  {
+    id: "tree4", cat: "treehouse",
+    type: "樹上ハウス", nameEn: "TREE HOUSE No.4", nameJp: "No.4",
+    icon: "🌳", iconBg: "#e8f5e9",
+    steps: TREEHOUSE_STEPS,
+  },
+  {
+    id: "tree5", cat: "treehouse",
+    type: "樹上ハウス", nameEn: "TREE HOUSE No.5", nameJp: "No.5",
+    icon: "🌳", iconBg: "#e8f5e9",
+    steps: TREEHOUSE_STEPS,
+  },
+  {
+    id: "akahige", cat: "cabin",
+    type: "森のキャビン", nameEn: "AKAHIGE", nameJp: "アカヒゲ",
+    icon: "🦅", iconBg: "#fce4ec",
+    steps: [
+      { id:"s1", icon:"🔍", label:"忘れ物チェック" },
+      { id:"s2", icon:"🧹", label:"室内清掃" },
+      { id:"s3", icon:"❄️", label:"冷蔵庫のクリーニング" },
+      { id:"s4", icon:"🛏️", label:"寝具の撤収（オプション有時）", opt:"寝具オプション時" },
+      { id:"s5", icon:"🛏️", label:"寝具のセッティング（オプション有時）", opt:"寝具オプション時" },
+    ],
+  },
+  {
+    id: "noguchi", cat: "cabin",
+    type: "森のキャビン", nameEn: "NOGUCHIGERA", nameJp: "ノグチゲラ",
+    icon: "🦅", iconBg: "#fce4ec",
+    steps: [
+      { id:"s1", icon:"🔍", label:"忘れ物チェック" },
+      { id:"s2", icon:"🧹", label:"室内清掃" },
+      { id:"s3", icon:"❄️", label:"冷蔵庫のクリーニング" },
+      { id:"s4", icon:"🛏️", label:"寝具の撤収（オプション有時）", opt:"寝具オプション時" },
+      { id:"s5", icon:"🛏️", label:"寝具のセッティング（オプション有時）", opt:"寝具オプション時" },
+    ],
+  },
+];
+
+// ── STATE ──────────────────────────────────────────────────────
+function defaultFacilityState() {
+  return { checked: {}, checkedBy: {}, completedAt: null, completedBy: null,
+           completedMode: null, memo: "", memoBy: null, memoAt: null,
+           laundry: false, nextCheckin: "", lastResetDate: null,
+           updatedAt: 0, schema: SCHEMA_VER };
+}
+
+// 古いデータに新フィールドを補完する（デバイス間の表示差の主因を解消）
+function migrateFacilityState(raw) {
+  const base = defaultFacilityState();
+  if (!raw || typeof raw !== 'object') return base;
+  const merged = { ...base, ...raw };
+  // 型の保証（壊れたデータでも落ちないように）
+  if (typeof merged.checked   !== 'object' || merged.checked   === null) merged.checked   = {};
+  if (typeof merged.checkedBy !== 'object' || merged.checkedBy === null) merged.checkedBy = {};
+  if (typeof merged.memo      !== 'string') merged.memo = '';
+  if (typeof merged.updatedAt !== 'number') merged.updatedAt = 0;
+  merged.schema = SCHEMA_VER;
+  return merged;
+}
+
+// 変更のたびに「未送信」として印をつける
+function touch(fid) {
+  if (!state[fid]) state[fid] = defaultFacilityState();
+  state[fid].updatedAt = Date.now();  // 参考情報（マージ判定には使わない）
+  dirtyFids.add(fid);                 // ★これが送信対象の判定に使われる
+  saveLocal();
+}
+
+function initState() {
+  FACILITIES.forEach(f => {
+    if (!state[f.id]) state[f.id] = defaultFacilityState();
+  });
+}
+
+function saveLocal() {
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+}
+
+// render前にDOMの入力値を取り込む（入力中の文字が消えないように）
+function captureMemos() {
+  const activeEl = document.activeElement;
+  FACILITIES.forEach(f => {
+    const memoEl    = document.getElementById(`memo-${f.id}`);
+    const checkinEl = document.getElementById(`checkin-${f.id}`);
+    if (!state[f.id]) return;
+
+    // ★入力中、または未送信の変更を持つものだけを取り込む。
+    //   無条件に取り込むと、他デバイスから届いたメモを
+    //   描画前の古い画面の内容で打ち消してしまう。
+    if (memoEl && (activeEl === memoEl || pendingMemoFids.has(f.id) || dirtyFids.has(f.id))) {
+      state[f.id].memo = memoEl.value;
+    }
+    if (checkinEl && (activeEl === checkinEl || dirtyFids.has(f.id))) {
+      state[f.id].nextCheckin = checkinEl.value;
+    }
+  });
+}
+
+async function loadFromGAS() {
+  showSyncStatus("🔄 データを読み込み中...", "loading");
+  try {
+    // キャッシュ回避のため毎回異なるパラメータを付与
+    const res = await fetch(`${GAS_URL}?action=load&_=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+
+    if (json.status === "ok" && json.data && json.data !== "{}") {
+      const remote = JSON.parse(json.data);
+      const activeEl = document.activeElement;
+      const activeCheckinId = activeEl?.classList?.contains('checkin-input')
+        ? activeEl.id.replace('checkin-', '') : null;
+
+      FACILITIES.forEach(f => {
+        // ★未送信の変更を持つ棟だけはローカルを維持（それ以外は常にサーバーを正とする）
+        //   端末の時計を比較しないため、時計ズレによる取りこぼしが起きない
+        if (dirtyFids.has(f.id)) return;
+
+        let next = migrateFacilityState(remote[f.id]);
+
+        // 入力途中のメモ・日付は絶対に上書きしない
+        if (pendingMemoFids.has(f.id) || activeEl?.id === `memo-${f.id}`) {
+          next = { ...next, memo: state[f.id]?.memo ?? next.memo,
+                            memoBy: state[f.id]?.memoBy ?? next.memoBy,
+                            memoAt: state[f.id]?.memoAt ?? next.memoAt };
+        }
+        if (f.id === activeCheckinId) {
+          next = { ...next, nextCheckin: state[f.id]?.nextCheckin ?? next.nextCheckin };
+        }
+        state[f.id] = next;
+      });
+      saveLocal();
+      lastSyncOk = new Date();
+      lastSyncErr = null;
+      hideSyncError();
+      showSyncStatus("✅ 同期済み", "ok");
+    } else if (json.status === "ok") {
+      // リモートが空 → ローカルを正とする
+      loadFromLocal();
+      lastSyncOk = new Date();
+      hideSyncError();
+      showSyncStatus("✅ 同期済み", "ok");
+    } else {
+      throw new Error(json.message || 'GASエラー');
+    }
+  } catch(e) {
+    loadFromLocal();
+    lastSyncErr = e.message;
+    showSyncStatus("⚠️ オフライン（ローカルデータを使用）", "warn");
+    console.warn('[KFP] load失敗:', e);
+  }
+  render();
+}
+
+async function saveToGAS() {
+  // ★保存中でも呼び出し元を待たせる（従来は即returnしてawaitが空振りしていた）
+  if (isSyncing) {
+    savePending = true;
+    return syncingPromise;           // 進行中の保存が終わるまで待つ
+  }
+  isSyncing = true;
+  syncingPromise = (async () => {
+    try { await doSave_(); }
+    finally {
+      isSyncing = false;
+      if (savePending) { savePending = false; await saveToGAS(); }
+    }
+  })();
+  return syncingPromise;
+}
+
+// POSTで一括送信
+async function postPatch_(patch) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: 'patch', facilities: patch,
+      device: deviceId, version: APP_VERSION,
+    }),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const txt = await res.text();
+  let json;
+  try { json = JSON.parse(txt); }
+  catch (_) {
+    // JSONで返ってこない＝ログイン画面が返っている等（公開設定・デプロイの問題）
+    throw new Error('応答がJSONでない（デプロイ/公開設定の疑い）');
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '保存エラー');
+}
+
+// GETで棟ごとに送信（POSTがブロックされる環境向けの保険）
+async function getPatchFallback_(patch) {
+  const fids = Object.keys(patch);
+  for (const fid of fids) {
+    const body = encodeURIComponent(JSON.stringify(patch[fid]));
+    if (body.length > 7000) throw new Error(`${fid} のデータが大きくGETでは送れません`);
+    const url = `${GAS_URL}?action=patch1&fid=${encodeURIComponent(fid)}`
+              + `&data=${body}&device=${deviceId}&_=${Date.now()}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const txt = await res.text();
+    let json;
+    try { json = JSON.parse(txt); }
+    catch (_) { throw new Error('応答がJSONでない（デプロイ/公開設定の疑い）'); }
+    if (json.status !== 'ok') throw new Error(json.message || '保存エラー');
+  }
+}
+
+async function doSave_() {
+  showSyncStatus("🔄 保存中...", "loading");
+  saveLocal();
+
+  // ★この端末で変更した棟だけを送る（他の人が触った棟を巻き添えで上書きしない）
+  const sending = Array.from(dirtyFids);
+  const patch = {};
+  sending.forEach(fid => { if (state[fid]) patch[fid] = state[fid]; });
+
+  if (!sending.length) { showSyncStatus("✅ 同期済み", "ok"); return; }
+
+  let ok = false, lastErr = '';
+  for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
+    try {
+      try {
+        await postPatch_(patch);            // ① 通常はPOST
+        lastSaveMethod = 'POST';
+      } catch (postErr) {
+        // ② POSTが通らない環境では棟ごとにGETで送る（自動フォールバック）
+        console.warn('[KFP] POST不可 → GETで再試行:', postErr.message);
+        await getPatchFallback_(patch);
+        lastSaveMethod = 'GET（POSTが不可のため）';
+      }
+      // 送信できた分だけ「未送信」から外す（送信中に増えた分は残す）
+      sending.forEach(fid => dirtyFids.delete(fid));
+      ok = true;
+    } catch(e) {
+      lastErr = e.message;
+      console.warn(`[KFP] save失敗 (${attempt}/3):`, e);
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 600));
+    }
+  }
+
+  if (ok) {
+    lastSyncOk = new Date();
+    lastSyncErr = null;
+    hideSyncError();
+    showSyncStatus("✅ 全デバイスに同期済み", "ok");
+  } else {
+    lastSyncErr = lastErr;
+    showSyncStatus("⚠️ 保存できません", "warn");
+    // ★失敗を見逃さないよう画面全幅で警告（従来は小さい文字だけだった）
+    showSyncError(lastErr);
+  }
+}
+
+// ── 保存失敗の警告バナー ──────────────────────────────────────
+function showSyncError(msg) {
+  const el = document.getElementById('syncError');
+  if (!el) return;
+  document.getElementById('syncErrorMsg').textContent = msg || '原因不明';
+  el.classList.add('show');
+}
+function hideSyncError() {
+  document.getElementById('syncError')?.classList.remove('show');
+}
+
+function loadFromLocal() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LOCAL_KEY) || "{}");
+    FACILITIES.forEach(f => {
+      state[f.id] = migrateFacilityState(s[f.id]);
+    });
+  } catch(e) { initState(); }
+}
+
+// ── 作業ログ記録（スプレッドシートへ追記）──────────────────────
+const LOG_QUEUE_KEY = "kfp_log_queue";
+
+function logActivity({ action, facility, step, detail }) {
+  const entry = {
+    at:       new Date().toISOString(),
+    staff:    myStaff || '(未選択)',
+    facility: facility || '',
+    action:   action || '',
+    step:     step || '',
+    detail:   detail || '',
+    device:   deviceId,
+    version:  APP_VERSION,
+  };
+  // オフラインでも失わないようキューに積む
+  const queue = getLogQueue();
+  queue.push(entry);
+  localStorage.setItem(LOG_QUEUE_KEY, JSON.stringify(queue.slice(-500)));
+  flushLogQueue();
+}
+
+function getLogQueue() {
+  try { return JSON.parse(localStorage.getItem(LOG_QUEUE_KEY) || "[]"); }
+  catch(e) { return []; }
+}
+
+let flushingLogs = false;
+async function flushLogQueue() {
+  if (flushingLogs) return;
+  const queue = getLogQueue();
+  if (!queue.length) return;
+  flushingLogs = true;
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'log', entries: queue }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json().catch(() => ({ status: 'ok' }));
+    if (json.status && json.status !== 'ok') throw new Error(json.message || 'ログ保存エラー');
+    // 送信できた分だけキューから除去（送信中に増えた分は残す）
+    const now = getLogQueue();
+    localStorage.setItem(LOG_QUEUE_KEY, JSON.stringify(now.slice(queue.length)));
+  } catch(e) {
+    console.warn('[KFP] ログ送信失敗（次回リトライ）:', e);
+  }
+  flushingLogs = false;
+}
+
+function showSyncStatus(msg, type) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'sync-status sync-' + type;
+}
+
+// セクション行（section:true）はチェック対象外
+function checkableSteps(f) { return f.steps.filter(s => !s.section); }
+
+function getFacilityStatus(fid) {
+  const f = FACILITIES.find(x => x.id === fid);
+  const s = state[fid];
+  if (!f || !s) return "dirty";
+  // 一括完了またはチェックリスト完了はどちらも "done"
+  if (s.completedMode) return "done";
+  const total = checkableSteps(f).length;
+  const done  = Object.values(s.checked).filter(Boolean).length;
+  if (done === 0)     return "dirty";
+  if (done === total) return "done";
+  return "wip";
+}
+
+function getProgress(fid) {
+  const f = FACILITIES.find(x => x.id === fid);
+  const s = state[fid];
+  if (!f || !s) return { done: 0, total: 0 };
+  return { done: Object.values(s.checked).filter(Boolean).length, total: checkableSteps(f).length };
+}
+
+// ── CLOCK ──────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+// ── RENDER ─────────────────────────────────────────────────────
+let currentCat = 'all';
+
+function render() {
+  captureMemos(); // ← 入力中の内容だけDOMから取り込む（文字消え防止）
+
+  // 入力中の位置を覚えておく（再描画でカーソルが飛ぶのを防ぐ）
+  const act = document.activeElement;
+  const keepId = (act && (act.classList?.contains('memo-textarea') ||
+                          act.classList?.contains('checkin-input'))) ? act.id : null;
+  // 日付入力など selectionStart を持たない要素では例外が出るため保護
+  let selStart = null, selEnd = null;
+  if (keepId) {
+    try { selStart = act.selectionStart; selEnd = act.selectionEnd; } catch(_) {}
+  }
+
+  renderOverview();
+  renderGrid();
+
+  // 入力欄にフォーカスとカーソル位置を戻す
+  if (keepId) {
+    const el = document.getElementById(keepId);
+    if (el) {
+      el.focus({ preventScroll: true });
+      if (selStart != null && el.setSelectionRange) {
+        try { el.setSelectionRange(selStart, selEnd); } catch(_) {}
+      }
+    }
+  }
+}
+
+function renderOverview() {
+  const strip = document.getElementById('overviewStrip');
+  strip.innerHTML = FACILITIES.map(f => {
+    const status = getFacilityStatus(f.id);
+    const { done, total } = getProgress(f.id);
+    const cmode = state[f.id]?.completedMode;
+    const statusText = cmode === 'quick' ? '📋 一括完了' :
+                       status === 'done' ? '✅ 使用可' :
+                       status === 'wip'  ? `${done}/${total}` : '清掃待ち';
+    const statusColor = cmode === 'quick' ? '#c8960a' :
+                        status === 'done' ? '#4caf50' :
+                        status === 'wip'  ? '#e8b84b' : 'rgba(255,255,255,.6)';
+    const laundryMark = (f.cat === 'cottage' && state[f.id]?.laundry) ? ' 👕' : '';
+    return `
+      <div class="ov-chip ${status}" onclick="scrollToCard('${f.id}')">
+        <div class="ov-name">${f.icon} ${f.nameJp}${laundryMark}</div>
+        <div class="ov-status" style="color:${statusColor}">${statusText}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  const list = currentCat === 'all' ? FACILITIES : FACILITIES.filter(f => f.cat === currentCat);
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty"><div class="e-icon">🌿</div><div>施設が見つかりません</div></div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(f => {
+    const status = getFacilityStatus(f.id);
+    const { done, total } = getProgress(f.id);
+    const pct = total ? Math.round(done / total * 100) : 0;
+    const s   = state[f.id];
+
+    const cmode = s?.completedMode;
+    const badgeClass = cmode === 'quick' ? 'badge-quick' :
+                       status === 'done' ? 'badge-done' :
+                       status === 'wip'  ? 'badge-wip' : 'badge-dirty';
+    const badgeText  = cmode === 'quick' ? '📋 一括完了' :
+                       status === 'done' ? '✅ 使用可' :
+                       status === 'wip'  ? '⚙️ 清掃中' : '— 清掃待ち';
+
+    // ステップ一覧（セクション区切り・詳細メモ・チェック者バッジ付き）
+    const stepsHtml = f.steps.map(step => {
+      // セクションヘッダーはチェックなし
+      if (step.section) {
+        return `<div class="step-section">${step.label}</div>`;
+      }
+      const checked    = s.checked[step.id] || false;
+      const checkerRaw = (checked && s.checkedBy?.[step.id]) ? s.checkedBy[step.id] : null;
+      const checkerName = checkerRaw ? (typeof checkerRaw === 'string' ? checkerRaw : checkerRaw.name) : null;
+      const checkerAt   = checkerRaw?.at ? (() => {
+        const d = new Date(checkerRaw.at);
+        return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      })() : null;
+      return `
+        <div class="step ${checked ? 'checked' : ''}" onclick="toggleStep('${f.id}','${step.id}')">
+          <div class="step-main">
+            <div class="step-check"></div>
+            <span class="step-icon">${step.icon}</span>
+            <span class="step-label">${step.label}</span>
+            ${step.opt ? `<span class="step-opt">${step.opt}</span>` : ''}
+          </div>
+          ${step.note ? `<div class="step-note">${step.note}</div>` : ''}
+          ${checkerName ? `<div class="step-checker"><span>✓ ${checkerName}${checkerAt ? ` · ${checkerAt}` : ''}</span></div>` : ''}
+        </div>`;
+    }).join('');
+
+    // 洗濯物バナー（コテージのみ）
+    const hasLaundry = s.laundry || false;
+    const laundryHtml = f.cat === 'cottage' ? `
+      <div class="laundry-banner ${hasLaundry ? 'has-laundry' : ''}">
+        <span class="laundry-info">👕 洗濯物の状態</span>
+        <button class="laundry-btn ${hasLaundry ? 'active' : ''}" onclick="toggleLaundry('${f.id}')">
+          ${hasLaundry ? '🟦 干している' : '⬜ なし'}
+        </button>
+      </div>` : '';
+
+    // 完了スタンプ（完了者・完了時刻・モード）
+    const ts = s.completedAt ? new Date(s.completedAt).toLocaleString('ja-JP',{
+      month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'
+    }) : '';
+    const modeLabel = s.completedMode === 'quick' ? ' 〔一括〕' :
+                      s.completedMode === 'checklist' ? ' 〔全ステップ〕' : '';
+    const completedByLine = s.completedBy
+      ? `<div class="stamp-by">${s.completedBy} が確認${modeLabel} · ${ts}</div>`
+      : (ts ? `<div class="stamp-by">${ts}${modeLabel}</div>` : '');
+
+    // メモ記入者・記入日時
+    const memoTs = s.memoAt ? (() => {
+      const d = new Date(s.memoAt);
+      return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    })() : '';
+    const memoByLine = (s.memo || '').trim()
+      ? `<div class="memo-by">✍️ ${s.memoBy || '記入者不明'}${memoTs ? ` · ${memoTs}` : ''}</div>`
+      : '';
+
+    return `
+      <div class="card status-${status}" id="card-${f.id}">
+        <div class="card-head">
+          <div class="card-head-left">
+            <div class="facility-icon" style="background:${f.iconBg}">${f.icon}</div>
+            <div class="card-info">
+              <div class="card-type">${f.type}</div>
+              <div class="card-name">${f.nameEn}</div>
+              <div class="card-name-jp">${f.nameJp}</div>
+            </div>
+          </div>
+          <div class="status-col">
+            <span class="status-badge ${badgeClass}">${badgeText}</span>
+            <button class="btn-status-reset" onclick="resetCard('${f.id}')" title="この棟をリセット">
+              ↺ リセット
+            </button>
+          </div>
+        </div>
+        <div class="checkin-row">
+          <span class="checkin-label">📅 次回チェックイン</span>
+          <input
+            type="date"
+            class="checkin-input ${s.nextCheckin ? 'has-value' : ''}"
+            id="checkin-${f.id}"
+            value="${s.nextCheckin || ''}"
+            onchange="saveCheckin('${f.id}', this.value)"
+          >
+          ${s.nextCheckin ? `<button class="checkin-clear" onclick="saveCheckin('${f.id}','');document.getElementById('checkin-${f.id}').value=''" title="クリア">✕</button>` : ''}
+        </div>
+        ${laundryHtml}
+        <div class="progress-wrap">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill ${pct===100 ? 'complete' : ''}" style="width:${pct}%"></div>
+          </div>
+          <div class="progress-text">
+            <span>${done} / ${total} 工程完了</span>
+            <span>${pct}%</span>
+          </div>
+        </div>
+        <div class="steps">${stepsHtml}</div>
+        <div class="memo-wrap">
+          <div class="memo-label">📝 引き継ぎメモ</div>
+          ${memoByLine}
+          <textarea
+            class="memo-textarea"
+            id="memo-${f.id}"
+            placeholder="忘れ物・破損・特記事項など次の担当者への申し送りを記入"
+            oninput="saveMemo('${f.id}')"
+          >${(s.memo || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+          <div class="memo-saved" id="memo-saved-${f.id}"></div>
+        </div>
+        <div class="card-footer">
+          <button class="btn-action btn-complete"
+            onclick="quickComplete('${f.id}')"
+            ${status === 'done' ? 'disabled' : ''}>
+            📋 一括完了
+          </button>
+          <div class="ready-stamp">
+            <div><span class="stamp-icon">✅</span> 使用可能です</div>
+            ${completedByLine}
+          </div>
+          <button class="btn-action btn-reset" onclick="resetCard('${f.id}')">↺</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── INTERACTIONS ───────────────────────────────────────────────
+function requireStaff() {
+  if (!myStaff) {
+    showToast('⚠️ 先に担当者を選択してください');
+    document.getElementById('staffSelect').focus();
+    return false;
+  }
+  return true;
+}
+
+function toggleStep(fid, sid) {
+  if (!requireStaff()) return;
+  if (!state[fid]) state[fid] = defaultFacilityState();
+  if (!state[fid].checkedBy) state[fid].checkedBy = {};
+
+  const wasChecked = state[fid].checked[sid];
+  state[fid].checked[sid] = !wasChecked;
+
+  if (state[fid].checked[sid]) {
+    state[fid].checkedBy[sid] = { name: myStaff, at: new Date().toISOString() };
+  } else {
+    delete state[fid].checkedBy[sid];
+  }
+
+  const f = FACILITIES.find(x => x.id === fid);
+  const stepDef = f?.steps.find(x => x.id === sid);
+
+  const { done, total } = getProgress(fid);
+  if (done === total && total > 0) {
+    state[fid].completedAt = new Date().toISOString();
+    state[fid].completedBy = myStaff;
+    state[fid].completedMode = 'checklist';
+    showToast(`✅ ${f.nameJp} 清掃完了！使用可能です`);
+  } else {
+    state[fid].completedAt = null;
+    state[fid].completedBy = null;
+    state[fid].completedMode = null;
+  }
+  touch(fid);
+  render();
+  saveToGAS();
+
+  // 作業ログをスプレッドシートに記録
+  logActivity({
+    action: state[fid].checked[sid] ? 'step_check' : 'step_uncheck',
+    facility: f?.nameJp || fid,
+    step: stepDef?.label || sid,
+    detail: `${done}/${total}`,
+  });
+}
+
+function quickComplete(fid) {
+  if (!requireStaff()) return;
+  const f = FACILITIES.find(x => x.id === fid);
+  if (!confirm(`${f.nameJp} を一括完了にしますか？\n（個別ステップはチェックされません）`)) return;
+  if (!state[fid]) state[fid] = defaultFacilityState();
+  state[fid].completedAt = new Date().toISOString();
+  state[fid].completedBy = myStaff;
+  state[fid].completedMode = 'quick';
+  touch(fid);
+  render();
+  saveToGAS();
+  showToast(`📋 ${f.nameJp} 一括完了しました`);
+  logActivity({ action: 'quick_complete', facility: f.nameJp, step: '', detail: '一括完了' });
+}
+
+function resetCard(fid) {
+  const f = FACILITIES.find(x => x.id === fid);
+  if (!confirm(`${f.nameJp} の清掃状況をリセットしますか？\n※メモは残ります`)) return;
+  const memo    = state[fid]?.memo    || '';
+  const memoBy  = state[fid]?.memoBy  || null;
+  const memoAt  = state[fid]?.memoAt  || null;
+  const laundry = state[fid]?.laundry || false;
+  state[fid] = { ...defaultFacilityState(), memo, memoBy, memoAt, laundry };
+  touch(fid);
+  render();
+  saveToGAS();
+  showToast(`↺ ${f.nameJp} をリセットしました`);
+  logActivity({ action: 'reset', facility: f.nameJp, step: '', detail: '手動リセット' });
+}
+
+function resetAll() {
+  if (!confirm('全施設の清掃状況をリセットしますか？\n（朝のリセット用・メモは残ります）')) return;
+  FACILITIES.forEach(f => {
+    const memo    = state[f.id]?.memo    || '';
+    const memoBy  = state[f.id]?.memoBy  || null;
+    const memoAt  = state[f.id]?.memoAt  || null;
+    const laundry = state[f.id]?.laundry || false;
+    state[f.id] = { ...defaultFacilityState(), memo, memoBy, memoAt, laundry };
+    touch(f.id);
+  });
+  render();
+  saveToGAS();
+  showToast('↺ 全施設をリセットしました');
+  logActivity({ action: 'reset_all', facility: '全施設', step: '', detail: '手動全リセット' });
+}
+
+function toggleLaundry(fid) {
+  if (!state[fid]) state[fid] = defaultFacilityState();
+  state[fid].laundry = !state[fid].laundry;
+  touch(fid);
+  render();
+  saveToGAS();
+  const f = FACILITIES.find(x => x.id === fid);
+  showToast(state[fid].laundry ? `👕 ${f.nameJp}: 洗濯物を干しています` : `✓ ${f.nameJp}: 洗濯物なし`);
+  logActivity({ action: 'laundry', facility: f.nameJp, step: '',
+                detail: state[fid].laundry ? '干している' : 'なし' });
+}
+
+function saveCheckin(fid, val) {
+  if (!state[fid]) state[fid] = defaultFacilityState();
+  state[fid].nextCheckin = val;
+  touch(fid);
+  render();
+  saveToGAS();
+  const f = FACILITIES.find(x => x.id === fid);
+  logActivity({ action: 'checkin_set', facility: f?.nameJp || fid, step: '', detail: val || 'クリア' });
+}
+
+// メモ自動保存（800ms後）
+const memoTimers = {};
+const pendingMemoFids = new Set(); // 未GAS保存のメモを追跡
+
+function saveMemo(fid) {
+  const el = document.getElementById(`memo-${fid}`);
+  if (!el) return;
+  if (!state[fid]) state[fid] = defaultFacilityState();
+
+  // ① キー入力のたびにstateを即時更新（DOMが消える前に確保）
+  state[fid].memo = el.value;
+  // 記入者・記入日時を記録（空欄にした場合はクリア）
+  if (el.value.trim()) {
+    state[fid].memoBy = myStaff || null;
+    state[fid].memoAt = new Date().toISOString();
+  } else {
+    state[fid].memoBy = null;
+    state[fid].memoAt = null;
+  }
+  touch(fid);
+  pendingMemoFids.add(fid); // 未保存フラグON
+  saveLocal();               // ローカルにも即保存
+
+  // ② GASへの書き込みだけ800msデバウンス
+  clearTimeout(memoTimers[fid]);
+  memoTimers[fid] = setTimeout(async () => {
+    await saveToGAS();
+    pendingMemoFids.delete(fid); // 保存完了後にフラグOFF
+    const savedEl = document.getElementById(`memo-saved-${fid}`);
+    if (savedEl) {
+      savedEl.textContent = '✓ 全デバイスに保存しました';
+      savedEl.style.opacity = '1';
+      setTimeout(() => { savedEl.style.opacity = '0'; }, 2000);
+    }
+    const f = FACILITIES.find(x => x.id === fid);
+    if (el.value.trim()) {
+      logActivity({ action: 'memo', facility: f?.nameJp || fid, step: '',
+                    detail: el.value.slice(0, 200) });
+    }
+  }, 800);
+}
+
+function filterCat(cat, btn) {
+  currentCat = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  captureMemos();
+  renderGrid();
+}
+
+function scrollToCard(fid) {
+  const el = document.getElementById('card-' + fid);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.style.outline = '3px solid var(--amber)';
+    setTimeout(() => el.style.outline = '', 1500);
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+initStaffSelect();
+initState();
+loadFromLocal();
+render();
+const verEl = document.getElementById('appVer');
+if (verEl) verEl.textContent = `v${APP_VERSION}`;
+// ── リセットは手動のみ（自動リセットは廃止）──────────────────
+// 以前は10:00に自動リセットしていたが、保存失敗時に繰り返し発火する
+// 問題があったため、担当者が明示的に押す方式に変更した。
+
+// ── 接続テスト（同期できない原因を自動で切り分ける）──────────
+async function runConnectionTest() {
+  const out = [];
+  const testId = '__conn_test__';
+  out.push('【接続テスト結果】');
+  out.push('');
+
+  // ⓪ 疎通とバックエンド版数
+  let backendVer = null, loginPage = false;
+  try {
+    const res = await fetch(`${GAS_URL}?action=ping&_=${Date.now()}`, { cache: 'no-store' });
+    const txt = await res.text();
+    if (/<html|accounts\.google\.com|ログイン/i.test(txt)) { loginPage = true; throw new Error('ログイン画面が返る（公開設定が「全員」でない）'); }
+    const j = JSON.parse(txt);
+    backendVer = j.backend || '(不明)';
+    out.push('⓪ GAS疎通   : ✅ 成功 / バックエンド版数 ' + backendVer);
+    if (backendVer !== APP_VERSION) {
+      out.push('             ⚠️ アプリ版数(' + APP_VERSION + ')と不一致＝再デプロイが必要');
+    }
+  } catch(e) {
+    out.push('⓪ GAS疎通   : ❌ 失敗 — ' + e.message);
+    if (!loginPage) out.push('             （pingが無い＝古いコードの可能性）');
+  }
+
+  // ① 読み込み（GET）
+  let loadOk = false;
+  try {
+    const res = await fetch(`${GAS_URL}?action=load&_=${Date.now()}`, { cache: 'no-store' });
+    const txt = await res.text();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = JSON.parse(txt);
+    if (j.status !== 'ok') throw new Error(j.message || '応答エラー');
+    loadOk = true;
+    out.push('① 読み込み  : ✅ 成功');
+  } catch(e) {
+    out.push('① 読み込み  : ❌ 失敗 — ' + e.message);
+  }
+
+  // ② 書き込み（POST → 失敗ならGET）
+  let saveOk = false, saveVia = '';
+  const stamp = Date.now();
+  const probe = { [testId]: { probe: stamp, device: deviceId } };
+  try {
+    await postPatch_(probe);
+    saveOk = true; saveVia = 'POST';
+    out.push('② 書き込み  : ✅ 成功（POST）');
+  } catch(ePost) {
+    out.push('② 書き込み  : ⚠️ POST不可 — ' + ePost.message);
+    try {
+      await getPatchFallback_(probe);
+      saveOk = true; saveVia = 'GET';
+      out.push('             ✅ GETで成功（POSTがブロックされています）');
+    } catch(eGet) {
+      out.push('             ❌ GETも失敗 — ' + eGet.message);
+    }
+  }
+
+  // ③ 書き戻りの確認（本当にサーバーに残ったか）
+  let roundTrip = false;
+  if (saveOk) {
+    try {
+      await new Promise(r => setTimeout(r, 800));
+      const res = await fetch(`${GAS_URL}?action=load&_=${Date.now()}`, { cache: 'no-store' });
+      const j = JSON.parse(await res.text());
+      const d = JSON.parse(j.data || '{}');
+      roundTrip = d[testId] && Number(d[testId].probe) === stamp;
+      out.push('③ 書き戻り  : ' + (roundTrip ? '✅ 確認できた' : '❌ 保存されていない'));
+    } catch(e) {
+      out.push('③ 書き戻り  : ❌ 確認できず — ' + e.message);
+    }
+  } else {
+    out.push('③ 書き戻り  : — （②が失敗のため未実施）');
+  }
+
+  // ④ 判定
+  out.push('');
+  out.push('── 判定 ──');
+  if (location.protocol === 'file:') {
+    out.push('❌ ファイルを直接開いています（file://）。');
+    out.push('　 この状態ではGASと通信できません。');
+    out.push('　 公開URLから開いてください：');
+    out.push('　 https://mojicamp0410.github.io/kunigami-cleaning/');
+  } else if (loginPage) {
+    out.push('❌ ログイン画面が返っています。');
+    out.push('　 GASのデプロイ設定を直してください：');
+    out.push('　 デプロイを管理 → 鉛筆 →');
+    out.push('　 「アクセスできるユーザー」を【全員】に変更');
+  } else if (backendVer && backendVer !== APP_VERSION) {
+    out.push('❌ GASのコードが古いままです（' + backendVer + '）。');
+    out.push('　 Apps Scriptでコードを最新に差し替えたうえで、');
+    out.push('　 デプロイを管理 → 鉛筆 →');
+    out.push('　 バージョンを【新バージョン】→ デプロイ');
+  } else if (!backendVer && loadOk) {
+    out.push('❌ 読めるが ping が無い＝古いコードが動いています。');
+    out.push('　 GASのコードを最新に差し替えて再デプロイしてください。');
+    out.push('　 ※HTMLのGAS_URLが別プロジェクトを指している');
+    out.push('　　 可能性もあります。Apps Scriptの「実行数」画面に');
+    out.push('　　 アクセス記録が出るか確認してください。');
+  } else if (loadOk && saveOk && roundTrip) {
+    out.push('✅ 同期は正常です（保存経路: ' + saveVia + '）。');
+    if (saveVia === 'GET') {
+      out.push('　 ただしPOSTがブロックされています。');
+      out.push('　 データ量が増えると保存できなくなるため、');
+      out.push('　 原因の解消をおすすめします。');
+    }
+    out.push('　 反映されない場合は、相手の端末で');
+    out.push('　 ⟳ ボタンを押して再読み込みしてください。');
+  } else if (loadOk && !saveOk) {
+    out.push('❌ 読めるが書けない状態です。');
+    out.push('　 ・デプロイを「新バージョン」で更新したか');
+    out.push('　 ・アクセスできるユーザーが【全員】か');
+    out.push('　 ・Apps Scriptの「実行数」画面にエラーが出ていないか');
+  } else if (saveOk && !roundTrip) {
+    out.push('❌ 保存要求は通るが、データが残っていません。');
+    out.push('　 Apps Scriptの「実行数」でエラー内容を確認してください。');
+  } else {
+    out.push('❌ GASに接続できていません。');
+    out.push('　 通信状況とGAS_URLを確認してください。');
+  }
+  out.push('');
+  out.push('── 参考情報 ──');
+  out.push('開いているURL : ' + location.protocol + '//' + location.host);
+  out.push('接続先GAS     : ...' + GAS_URL.slice(-28));
+  out.push('アプリ版数    : ' + APP_VERSION);
+  out.push('GAS版数       : ' + (backendVer || '取得できず'));
+  out.push('端末ID        : ' + deviceId);
+  out.push('未送信の棟    : ' + dirtyFids.size + ' 件');
+
+  const text = out.join('\n');
+  if (confirm(text + '\n\n[OK] でこの内容をコピーします')) {
+    navigator.clipboard?.writeText(text)
+      .then(() => showToast('📋 テスト結果をコピーしました'))
+      .catch(() => {});
+  }
+}
+
+// ── 診断パネル（デバイス間の差異を調べるため）──────────────────
+function showDiagnostics() {
+  const lines = [];
+  lines.push(`アプリ版数 : ${APP_VERSION}`);
+  lines.push(`スキーマ   : v${SCHEMA_VER}`);
+  lines.push(`端末ID     : ${deviceId}`);
+  lines.push(`担当者     : ${myStaff || '(未選択)'}`);
+  lines.push(`現在時刻   : ${jstNow().toLocaleString('ja-JP')} (JST換算)`);
+  lines.push(`最終同期   : ${lastSyncOk ? lastSyncOk.toLocaleString('ja-JP') : '未同期'}`);
+  lines.push(`直近エラー : ${lastSyncErr || 'なし'}`);
+  lines.push(`保存経路   : ${lastSaveMethod}`);
+  lines.push(`未送信ログ : ${getLogQueue().length} 件`);
+  lines.push(`未保存メモ : ${pendingMemoFids.size} 件`);
+  lines.push(`未送信の棟 : ${dirtyFids.size} 件 ${dirtyFids.size ? '⚠️ ' + Array.from(dirtyFids).join(',') : ''}`);
+  lines.push('');
+  lines.push('── 施設別の最終更新 ──');
+  FACILITIES.forEach(f => {
+    const s = state[f.id] || {};
+    const u = s.updatedAt ? new Date(s.updatedAt).toLocaleString('ja-JP') : '—';
+    const st = getFacilityStatus(f.id);
+    lines.push(`${f.nameJp}: ${st}${s.completedMode ? `(${s.completedMode})` : ''} / 更新 ${u}`);
+  });
+  lines.push('');
+  lines.push('※他の端末と「アプリ版数」が違う場合は、その端末で');
+  lines.push('　ページを再読み込み（更新）してください。');
+
+  const text = lines.join('\n');
+  if (confirm(text + '\n\n[OK] でこの内容をコピーします')) {
+    navigator.clipboard?.writeText(text)
+      .then(() => showToast('📋 診断情報をコピーしました'))
+      .catch(() => {});
+  }
+}
+
+// 強制リフレッシュ（キャッシュを捨てて最新版を取得）
+function forceRefresh() {
+  if (!confirm('最新版を再読み込みしますか？\n（未同期の変更は先に保存されます）')) return;
+  saveToGAS().finally(() => {
+    location.replace(location.pathname + '?v=' + Date.now());
+  });
+}
+
+// ── 起動シーケンス ─────────────────────────────────────────────
+(async function boot() {
+  await loadFromGAS();
+  flushLogQueue();           // 溜まっていたログを送信
+})();
+
+// 30秒ごとに自動同期（他デバイスの更新を反映）
+setInterval(() => { loadFromGAS(); }, 30000);
+// 1分ごとに未送信ログを再送
+setInterval(flushLogQueue, 60000);
+// 30秒ごとに未送信の変更を再送（電波が戻ったときに自動で復旧）
+setInterval(() => { if (dirtyFids.size) saveToGAS(); }, 30000);
+// 画面復帰時に即同期（スマホでよくある「古い表示のまま」を防ぐ）
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) { loadFromGAS(); flushLogQueue(); }
+});
+window.addEventListener('online', () => { loadFromGAS(); flushLogQueue(); });
+</script>
+</body>
+</html>
