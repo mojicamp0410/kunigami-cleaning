@@ -36,16 +36,20 @@ body {
 }
 
 /* ── TOP BAR ── */
+/* ヘッダーとカテゴリーをまとめて常時表示 */
+.sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--pale);
+  box-shadow: 0 2px 12px rgba(0,0,0,.18);
+}
 .topbar {
   background: var(--forest);
   padding: .9rem 1.2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 12px rgba(0,0,0,.25);
   gap: .6rem;
   flex-wrap: wrap;
 }
@@ -214,11 +218,14 @@ body {
 
 /* ── CATEGORY FILTER ── */
 .cat-bar {
-  padding: .8rem 1rem .4rem;
+  padding: .55rem 1rem;
   display: flex;
   gap: .5rem;
   overflow-x: auto;
   scrollbar-width: none;
+  background: var(--pale);
+  border-bottom: 1px solid var(--border);
+  -webkit-overflow-scrolling: touch;
 }
 .cat-bar::-webkit-scrollbar { display: none; }
 .cat-btn {
@@ -694,23 +701,35 @@ body {
 @media (max-width: 600px) {
   /* ── topbar: ロゴ行 + スタッフ行 の2段に ── */
   .topbar {
-    padding: .65rem .9rem .55rem;
-    gap: .4rem;
+    padding: .5rem .8rem .45rem;
+    gap: .35rem;
   }
-  .topbar-logo .title { font-size: .88rem; }
+  .topbar-logo .title { font-size: .82rem; }
   .topbar-logo .sub   { display: none; }
+  .topbar-logo .icon  { font-size: 1.1rem; }
   .topbar-right {
     width: 100%;
     justify-content: space-between;
-    gap: .4rem;
+    gap: .35rem;
   }
   .staff-select-wrap { flex: 1; }
   .staff-select      { font-size: .9rem; min-width: 0; width: 100%; }
-  .clock             { font-size: .75rem; padding: .25rem .5rem; }
-  .sync-status       { font-size: .68rem; padding: .2rem .5rem; }
-  .btn-reset-all     { font-size: .7rem; padding: .28rem .6rem; }
-  .btn-diag          { font-size: .75rem; padding: .28rem .45rem; }
+  .clock             { font-size: .72rem; padding: .22rem .45rem; }
+  .sync-status       { font-size: .66rem; padding: .18rem .45rem; }
+  .btn-reset-all     { font-size: .68rem; padding: .26rem .55rem; }
+  .btn-diag          { font-size: .72rem; padding: .26rem .4rem; }
   .app-ver           { font-size: .55rem; }
+
+  /* 固定エリアを低く保つため、時計と版数はスマホでは省略 */
+  .clock, .app-ver { display: none; }
+
+  /* 診断系ボタンは1行にまとめてコンパクトに */
+  .topbar-tools {
+    display: flex;
+    gap: .3rem;
+    align-items: center;
+    flex-shrink: 0;
+  }
 
   /* ── スタッフアラート ── */
   .staff-alert { font-size: .78rem; padding: .5rem .9rem; }
@@ -777,16 +796,17 @@ body {
 </head>
 <body>
 
-<!-- TOP BAR -->
-<header class="topbar">
-  <div class="topbar-logo">
-    <span class="icon">🏕️</span>
-    <div>
-      <div class="title">国頭村森林公園</div>
-      <div class="sub">清掃・引き継ぎ管理システム</div>
+<!-- 常時表示エリア（ヘッダー＋カテゴリー） -->
+<div class="sticky-head">
+  <header class="topbar">
+    <div class="topbar-logo">
+      <span class="icon">🏕️</span>
+      <div>
+        <div class="title">国頭村森林公園</div>
+        <div class="sub">清掃・引き継ぎ管理システム</div>
+      </div>
     </div>
-  </div>
-  <div class="topbar-right">
+    <div class="topbar-right">
     <div class="staff-select-wrap">
       <span class="staff-label">担当者：</span>
       <select class="staff-select unset" id="staffSelect" onchange="onStaffChange(this.value)">
@@ -795,13 +815,25 @@ body {
     </div>
     <div class="sync-status sync-loading" id="syncStatus">🔄 読み込み中...</div>
     <div class="clock" id="clock">--:--</div>
+    <div class="topbar-tools">
     <button class="btn-reset-all" onclick="resetAll()">全リセット</button>
     <button class="btn-diag" onclick="forceRefresh()" title="最新版に更新">⟳</button>
     <button class="btn-diag" onclick="showDiagnostics()" title="診断情報">🩺</button>
     <button class="btn-diag" onclick="runConnectionTest()" title="接続テスト">📡</button>
-    <span class="app-ver" id="appVer"></span>
+      </div>
+      <span class="app-ver" id="appVer"></span>
+    </div>
+  </header>
+
+  <!-- CATEGORY FILTER（ヘッダーと一体で常時表示） -->
+  <div class="cat-bar">
+    <button class="cat-btn active" onclick="filterCat('all',this)">すべて</button>
+    <button class="cat-btn" onclick="filterCat('bungalow',this)">🏠 バンガロー</button>
+    <button class="cat-btn" onclick="filterCat('cottage',this)">⭐ 星のコテージ</button>
+    <button class="cat-btn" onclick="filterCat('treehouse',this)">🌳 樹上ハウス</button>
+    <button class="cat-btn" onclick="filterCat('cabin',this)">🦅 森のキャビン</button>
   </div>
-</header>
+</div>
 
 <!-- スタッフ未選択アラート -->
 <div class="staff-alert" id="staffAlert">
@@ -821,15 +853,6 @@ body {
 <!-- OVERVIEW STRIP -->
 <div class="overview" id="overviewStrip"></div>
 
-<!-- CATEGORY FILTER -->
-<div class="cat-bar">
-  <button class="cat-btn active" onclick="filterCat('all',this)">すべて</button>
-  <button class="cat-btn" onclick="filterCat('bungalow',this)">🏠 バンガロー</button>
-  <button class="cat-btn" onclick="filterCat('cottage',this)">⭐ 星のコテージ</button>
-  <button class="cat-btn" onclick="filterCat('treehouse',this)">🌳 樹上ハウス</button>
-  <button class="cat-btn" onclick="filterCat('cabin',this)">🦅 森のキャビン</button>
-</div>
-
 <!-- GRID -->
 <main class="grid" id="grid"></main>
 
@@ -837,7 +860,7 @@ body {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const APP_VERSION = "5.2.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
+const APP_VERSION = "5.3.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
 const SCHEMA_VER  = 5;        // stateの構造バージョン
 const STAFF_LIST = ["MOJI", "かずな", "たくま", "さり", "あやこ", "かずこ"];
 const STAFF_KEY  = "kfp_my_staff";
@@ -1187,11 +1210,21 @@ function saveLocal() {
 
 // render前にDOMの入力値を取り込む（入力中の文字が消えないように）
 function captureMemos() {
+  const activeEl = document.activeElement;
   FACILITIES.forEach(f => {
-    const memo    = document.getElementById(`memo-${f.id}`);
-    const checkin = document.getElementById(`checkin-${f.id}`);
-    if (memo    && state[f.id]) state[f.id].memo        = memo.value;
-    if (checkin && state[f.id]) state[f.id].nextCheckin = checkin.value;
+    const memoEl    = document.getElementById(`memo-${f.id}`);
+    const checkinEl = document.getElementById(`checkin-${f.id}`);
+    if (!state[f.id]) return;
+
+    // ★入力中、または未送信の変更を持つものだけを取り込む。
+    //   無条件に取り込むと、他デバイスから届いたメモを
+    //   描画前の古い画面の内容で打ち消してしまう。
+    if (memoEl && (activeEl === memoEl || pendingMemoFids.has(f.id) || dirtyFids.has(f.id))) {
+      state[f.id].memo = memoEl.value;
+    }
+    if (checkinEl && (activeEl === checkinEl || dirtyFids.has(f.id))) {
+      state[f.id].nextCheckin = checkinEl.value;
+    }
   });
 }
 
@@ -1465,9 +1498,31 @@ setInterval(updateClock, 10000);
 let currentCat = 'all';
 
 function render() {
-  captureMemos(); // ← 先にDOMからメモを取り込む（文字消え防止）
+  captureMemos(); // ← 入力中の内容だけDOMから取り込む（文字消え防止）
+
+  // 入力中の位置を覚えておく（再描画でカーソルが飛ぶのを防ぐ）
+  const act = document.activeElement;
+  const keepId = (act && (act.classList?.contains('memo-textarea') ||
+                          act.classList?.contains('checkin-input'))) ? act.id : null;
+  // 日付入力など selectionStart を持たない要素では例外が出るため保護
+  let selStart = null, selEnd = null;
+  if (keepId) {
+    try { selStart = act.selectionStart; selEnd = act.selectionEnd; } catch(_) {}
+  }
+
   renderOverview();
   renderGrid();
+
+  // 入力欄にフォーカスとカーソル位置を戻す
+  if (keepId) {
+    const el = document.getElementById(keepId);
+    if (el) {
+      el.focus({ preventScroll: true });
+      if (selStart != null && el.setSelectionRange) {
+        try { el.setSelectionRange(selStart, selEnd); } catch(_) {}
+      }
+    }
+  }
 }
 
 function renderOverview() {
