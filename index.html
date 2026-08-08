@@ -309,6 +309,119 @@ body {
 .badge-done  { background: var(--done-lt); color: var(--done); }
 .badge-quick { background: #fff0c8; color: #8a6200; border: 1px solid #e8c84b; }
 
+/* ── 掲示板 ── */
+.cat-board { border-color: var(--gold); color: var(--gold); }
+.cat-board.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+.cat-count {
+  display: inline-block;
+  background: var(--red);
+  color: #fff;
+  font-size: .6rem;
+  padding: 0 .32rem;
+  border-radius: 1rem;
+  margin-left: .25rem;
+  vertical-align: middle;
+}
+.cat-board.active .cat-count { background: rgba(255,255,255,.35); }
+
+.board-wrap { grid-column: 1 / -1; max-width: 640px; margin: 0 auto; width: 100%; }
+.board-compose {
+  background: var(--white);
+  border: 2px solid var(--gold);
+  border-radius: 14px;
+  padding: .8rem .9rem .9rem;
+  margin-bottom: 1rem;
+}
+.board-label {
+  font-size: .74rem;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: .05em;
+  margin-bottom: .45rem;
+}
+.board-input {
+  width: 100%;
+  min-height: 68px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  font-size: .86rem;
+  font-family: 'Zen Kaku Gothic New', sans-serif;
+  color: var(--ink);
+  background: var(--pale);
+  resize: vertical;
+  line-height: 1.55;
+}
+.board-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(200,149,42,.12);
+  background: var(--white);
+}
+.board-input::placeholder { color: var(--sage); opacity: .6; }
+.board-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .6rem;
+  margin-top: .5rem;
+}
+.board-hint { font-size: .68rem; color: var(--sage); }
+.board-post-btn {
+  background: var(--gold);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: .5rem 1.3rem;
+  font-size: .82rem;
+  font-weight: 700;
+  font-family: 'Zen Kaku Gothic New';
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .15s;
+}
+.board-post-btn:hover { background: #a87a1f; }
+
+.board-list { display: flex; flex-direction: column; gap: .6rem; }
+.post {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-left: 4px solid var(--gold);
+  border-radius: 10px;
+  padding: .6rem .8rem .7rem;
+}
+.post-head {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: .35rem;
+}
+.post-by { font-size: .76rem; font-weight: 900; color: var(--forest); }
+.post-at {
+  font-size: .66rem;
+  color: var(--sage);
+  font-family: 'DM Mono', monospace;
+  flex: 1;
+}
+.post-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .82rem;
+  opacity: .45;
+  padding: .1rem .25rem;
+  border-radius: 4px;
+  transition: opacity .15s, background .15s;
+}
+.post-del:hover { opacity: 1; background: var(--red-lt); }
+.post-text {
+  font-size: .86rem;
+  line-height: 1.6;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* ステータス下のリセットボタン */
 .status-col {
   display: flex;
@@ -741,8 +854,17 @@ body {
   .ov-chip .ov-status { font-size: .72rem; }
 
   /* ── カテゴリフィルター ── */
-  .cat-bar   { padding: .6rem .75rem .35rem; gap: .4rem; }
+  .cat-bar   { padding: .5rem .75rem; gap: .4rem; }
   .cat-btn   { font-size: .72rem; padding: .32rem .75rem; }
+
+  /* ── 掲示板 ── */
+  .board-compose   { padding: .7rem .8rem .8rem; }
+  .board-input     { font-size: .9rem; min-height: 72px; }
+  .board-actions   { flex-direction: column; align-items: stretch; gap: .45rem; }
+  .board-hint      { text-align: center; }
+  .board-post-btn  { width: 100%; padding: .6rem; font-size: .88rem; }
+  .post-text       { font-size: .88rem; }
+  .post-del        { opacity: .8; font-size: 1rem; padding: .2rem .4rem; }
 
   /* ── グリッド ── */
   .grid { grid-template-columns: 1fr; gap: .65rem; padding: .5rem .75rem 2.5rem; }
@@ -832,6 +954,9 @@ body {
     <button class="cat-btn" onclick="filterCat('cottage',this)">⭐ 星のコテージ</button>
     <button class="cat-btn" onclick="filterCat('treehouse',this)">🌳 樹上ハウス</button>
     <button class="cat-btn" onclick="filterCat('cabin',this)">🦅 森のキャビン</button>
+    <button class="cat-btn cat-board" onclick="filterCat('board',this)">
+      📌 掲示板<span class="cat-count" id="boardCount"></span>
+    </button>
   </div>
 </div>
 
@@ -860,7 +985,7 @@ body {
 
 <script>
 // ── CONFIG ─────────────────────────────────────────────────────
-const APP_VERSION = "5.3.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
+const APP_VERSION = "5.4.0";  // ★更新のたびに上げること（キャッシュ差分の検知に使用）
 const SCHEMA_VER  = 5;        // stateの構造バージョン
 const STAFF_LIST = ["MOJI", "かずな", "たくま", "さり", "あやこ", "かずこ"];
 const STAFF_KEY  = "kfp_my_staff";
@@ -1190,6 +1315,58 @@ function migrateFacilityState(raw) {
   return merged;
 }
 
+// ── 掲示板（連絡板）────────────────────────────────────────────
+// 施設stateとは別枠。GAS上では "__board__" というキーで保存する。
+const BOARD_KEY = '__board__';
+let board = [];              // [{id, text, by, at, done:false}]
+let boardDirty = false;      // 未送信の変更があるか
+
+function loadBoardFrom(remoteObj) {
+  const raw = remoteObj && remoteObj[BOARD_KEY];
+  if (raw && Array.isArray(raw.posts)) {
+    board = raw.posts.filter(p => p && typeof p.text === 'string');
+  }
+}
+
+function boardPayload() {
+  return { posts: board, updatedAt: Date.now() };
+}
+
+function addPost() {
+  if (!requireStaff()) return;
+  const el = document.getElementById('boardInput');
+  const text = (el?.value || '').trim();
+  if (!text) { showToast('⚠️ 内容を入力してください'); return; }
+
+  board.unshift({
+    id:   'p' + Date.now() + Math.random().toString(36).slice(2, 6),
+    text,
+    by:   myStaff,
+    at:   new Date().toISOString(),
+  });
+  el.value = '';
+  boardDraft = '';
+  boardDirty = true;
+  saveLocal();
+  render();
+  saveToGAS();
+  showToast('📌 掲示板に投稿しました');
+  logActivity({ action: 'board_post', facility: '掲示板', step: '', detail: text.slice(0, 200) });
+}
+
+function deletePost(pid) {
+  const p = board.find(x => x.id === pid);
+  if (!p) return;
+  if (!confirm(`この投稿を削除しますか？\n\n「${p.text.slice(0, 40)}${p.text.length > 40 ? '…' : ''}」`)) return;
+  board = board.filter(x => x.id !== pid);
+  boardDirty = true;
+  saveLocal();
+  render();
+  saveToGAS();
+  showToast('🗑️ 投稿を削除しました');
+  logActivity({ action: 'board_delete', facility: '掲示板', step: '', detail: p.text.slice(0, 200) });
+}
+
 // 変更のたびに「未送信」として印をつける
 function touch(fid) {
   if (!state[fid]) state[fid] = defaultFacilityState();
@@ -1206,6 +1383,7 @@ function initState() {
 
 function saveLocal() {
   localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+  localStorage.setItem(LOCAL_KEY + '_board', JSON.stringify(board));
 }
 
 // render前にDOMの入力値を取り込む（入力中の文字が消えないように）
@@ -1260,6 +1438,10 @@ async function loadFromGAS() {
         }
         state[f.id] = next;
       });
+
+      // 掲示板（未送信の投稿があるときは上書きしない）
+      if (!boardDirty) loadBoardFrom(remote);
+
       saveLocal();
       lastSyncOk = new Date();
       lastSyncErr = null;
@@ -1348,7 +1530,11 @@ async function doSave_() {
   const patch = {};
   sending.forEach(fid => { if (state[fid]) patch[fid] = state[fid]; });
 
-  if (!sending.length) { showSyncStatus("✅ 同期済み", "ok"); return; }
+  // 掲示板に変更があれば一緒に送る
+  const sendingBoard = boardDirty;
+  if (sendingBoard) patch[BOARD_KEY] = boardPayload();
+
+  if (!sending.length && !sendingBoard) { showSyncStatus("✅ 同期済み", "ok"); return; }
 
   let ok = false, lastErr = '';
   for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
@@ -1364,6 +1550,7 @@ async function doSave_() {
       }
       // 送信できた分だけ「未送信」から外す（送信中に増えた分は残す）
       sending.forEach(fid => dirtyFids.delete(fid));
+      if (sendingBoard) boardDirty = false;
       ok = true;
     } catch(e) {
       lastErr = e.message;
@@ -1403,6 +1590,10 @@ function loadFromLocal() {
       state[f.id] = migrateFacilityState(s[f.id]);
     });
   } catch(e) { initState(); }
+  try {
+    const b = JSON.parse(localStorage.getItem(LOCAL_KEY + '_board') || "[]");
+    if (Array.isArray(b)) board = b;
+  } catch(e) { board = []; }
 }
 
 // ── 作業ログ記録（スプレッドシートへ追記）──────────────────────
@@ -1497,8 +1688,14 @@ setInterval(updateClock, 10000);
 // ── RENDER ─────────────────────────────────────────────────────
 let currentCat = 'all';
 
+let boardDraft = '';   // 掲示板の入力途中の文章を保持
+
 function render() {
   captureMemos(); // ← 入力中の内容だけDOMから取り込む（文字消え防止）
+
+  // 掲示板の書きかけを退避（再描画で消えないように）
+  const bi = document.getElementById('boardInput');
+  if (bi) boardDraft = bi.value;
 
   // 入力中の位置を覚えておく（再描画でカーソルが飛ぶのを防ぐ）
   const act = document.activeElement;
@@ -1512,6 +1709,7 @@ function render() {
 
   renderOverview();
   renderGrid();
+  renderBoardCount();
 
   // 入力欄にフォーカスとカーソル位置を戻す
   if (keepId) {
@@ -1525,8 +1723,15 @@ function render() {
   }
 }
 
+function renderBoardCount() {
+  const el = document.getElementById('boardCount');
+  if (el) el.textContent = board.length ? ` ${board.length}` : '';
+}
+
 function renderOverview() {
   const strip = document.getElementById('overviewStrip');
+  // 掲示板表示中は棟の一覧を隠す
+  strip.style.display = (currentCat === 'board') ? 'none' : '';
   strip.innerHTML = FACILITIES.map(f => {
     const status = getFacilityStatus(f.id);
     const { done, total } = getProgress(f.id);
@@ -1546,8 +1751,53 @@ function renderOverview() {
   }).join('');
 }
 
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderBoard() {
+  const grid = document.getElementById('grid');
+
+  const postsHtml = board.length ? board.map(p => {
+    const d = new Date(p.at);
+    const ts = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `
+      <div class="post">
+        <div class="post-head">
+          <span class="post-by">${esc(p.by || '不明')}</span>
+          <span class="post-at">${ts}</span>
+          <button class="post-del" onclick="deletePost('${p.id}')" title="削除">🗑️</button>
+        </div>
+        <div class="post-text">${esc(p.text)}</div>
+      </div>`;
+  }).join('') : `
+      <div class="empty">
+        <div class="e-icon">📭</div>
+        <div>まだ投稿がありません</div>
+      </div>`;
+
+  grid.innerHTML = `
+    <div class="board-wrap">
+      <div class="board-compose">
+        <div class="board-label">📌 全員への連絡を書く</div>
+        <textarea id="boardInput" class="board-input"
+          placeholder="例）シャワー室のカビキラーが残り1本です。買い出しお願いします">${esc(boardDraft)}</textarea>
+        <div class="board-actions">
+          <span class="board-hint">${myStaff ? myStaff + ' として投稿' : '⚠️ 先に担当者を選んでください'}</span>
+          <button class="board-post-btn" onclick="addPost()">投稿する</button>
+        </div>
+      </div>
+      <div class="board-list">${postsHtml}</div>
+    </div>`;
+}
+
 function renderGrid() {
   const grid = document.getElementById('grid');
+
+  // 掲示板モード
+  if (currentCat === 'board') { renderBoard(); return; }
+
   const list = currentCat === 'all' ? FACILITIES : FACILITIES.filter(f => f.cat === currentCat);
 
   if (!list.length) {
